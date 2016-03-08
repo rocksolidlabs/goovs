@@ -2,7 +2,6 @@ package goovs
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/kopwei/libovsdb"
 )
@@ -10,10 +9,10 @@ import (
 // CreateBridge is used to create a ovs bridge
 func (client *ovsClient) CreateBridge(brname string) error {
 	bridgeExists, err := client.BridgeExists(brname)
-	if bridgeExists {
-		return nil
-	} else if err != nil {
+	if err != nil {
 		return fmt.Errorf("Failed to retrieve the bridge info")
+	} else if bridgeExists {
+		return nil
 	}
 
 	namedBridgeUUID := "gobridge"
@@ -73,37 +72,21 @@ func (client *ovsClient) CreateBridge(brname string) error {
 	}
 
 	operations := []libovsdb.Operation{insertInterfaceOp, insertPortOp, insertBridgeOp, mutateOp}
-	reply, _ := client.dbClient.Transact(defaultOvsDB, operations...)
-
-	if len(reply) < len(operations) {
-		return fmt.Errorf("Number of Replies should be at least equal to number of Operations")
-	}
-	ok := true
-	for i, o := range reply {
-		if o.Error != "" {
-			ok = false
-			if i < len(operations) {
-				return fmt.Errorf("Transaction Failed due to an error : %s details: %s in %+v", o.Error, o.Details, operations[i])
-			}
-			return fmt.Errorf("Transaction Failed due to an error :%s", o.Error)
-		}
-	}
-	if ok {
-		log.Println("Bridge Addition Successful : ", reply[0].UUID.GoUuid)
-	}
-
-	return nil
+	return client.transact(operations, "create bridge")
 }
 
 // DeleteBridge is used to delete a ovs bridge
 func (client *ovsClient) DeleteBridge(brname string) error {
 	bridgeExists, err := client.BridgeExists(brname)
-	if !bridgeExists {
-		return nil
-	} else if err != nil {
+	if err != nil {
 		return fmt.Errorf("Failed to retrieve the bridge info")
+	} else if !bridgeExists {
+		return nil
 	}
-	namedBridgeUUID := "gobridge"
+	bridgeUUID, err := client.getBridgeUUIDByName(brname)
+	if err != nil {
+		return err
+	}
 
 	delBridgeCondition := libovsdb.NewCondition("name", "==", brname)
 	deleteOp := libovsdb.Operation{
@@ -113,7 +96,7 @@ func (client *ovsClient) DeleteBridge(brname string) error {
 	}
 
 	// Deleting a Bridge row in Bridge table requires mutating the open_vswitch table
-	mutateUUID := []libovsdb.UUID{libovsdb.UUID{namedBridgeUUID}}
+	mutateUUID := []libovsdb.UUID{libovsdb.UUID{bridgeUUID}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUUID)
 	mutation := libovsdb.NewMutation("bridges", deleteOperation, mutateSet)
 	condition := libovsdb.NewCondition("_uuid", "==", libovsdb.UUID{getRootUUID()})
@@ -127,25 +110,29 @@ func (client *ovsClient) DeleteBridge(brname string) error {
 	}
 
 	operations := []libovsdb.Operation{deleteOp, mutateOp}
-	reply, _ := client.dbClient.Transact(defaultOvsDB, operations...)
+	return client.transact(operations, "delete bridge")
+}
 
-	if len(reply) < len(operations) {
-		return fmt.Errorf("Number of Replies should be atleast equal to number of Operations")
+func (client *ovsClient) deleteAllPortsOnBridge(brname string) error {
+	bridgeExists, err := client.BridgeExists(brname)
+	if err != nil {
+		return fmt.Errorf("Failed to retrieve the bridge info")
+	} else if !bridgeExists {
+		return nil
 	}
-	ok := true
-	for i, o := range reply {
-		if o.Error != "" {
-			ok = false
-			if i < len(operations) {
-				return fmt.Errorf("Transaction Failed due to an error : %s details: %s in %+v", o.Error, o.Details, operations[i])
+
+	portList, err := client.FindAllPortsOnBridge(brname)
+	if err != nil {
+		return err
+	}
+	if len(portList) != 0 {
+		for _, portUUID := range portList {
+			err = client.deletePortByUUID(brname, portUUID)
+			if err != nil {
+				return err
 			}
-			return fmt.Errorf("Transaction Failed due to an error :%s details: %s", o.Error, o.Details)
 		}
 	}
-	if ok {
-		log.Println("Bridge Deletion Successful : ", reply[0].UUID.GoUuid)
-	}
-
 	return nil
 }
 
@@ -170,4 +157,28 @@ func (client *ovsClient) BridgeExists(brname string) (bool, error) {
 		return false, nil
 	}
 	return true, nil
+}
+
+func (client *ovsClient) getBridgeUUIDByName(brname string) (string, error) {
+	condition := libovsdb.NewCondition("name", "==", brname)
+	selectOp := libovsdb.Operation{
+		Op:    selectOperation,
+		Table: bridgeTableName,
+		Where: []interface{}{condition},
+		//Columns: []string{"_uuid"},
+	}
+	operations := []libovsdb.Operation{selectOp}
+	reply, _ := client.dbClient.Transact(defaultOvsDB, operations...)
+
+	if len(reply) < len(operations) {
+		return "", fmt.Errorf("get bridge uuid failed due to Number of Replies should be at least equal to number of Operations")
+	}
+	if reply[0].Error != "" {
+		return "", fmt.Errorf("get bridge uuid failed due to Transaction Failed due to an error: %v", reply[0].Error)
+	}
+	if len(reply[0].Rows) == 0 {
+		return "", fmt.Errorf("get bridge uuid failed due to bridge name doesn't exist")
+	}
+	answer := reply[0].Rows[0]["_uuid"].([]interface{})[1].(string)
+	return answer, nil
 }

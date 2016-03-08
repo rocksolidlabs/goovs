@@ -1,6 +1,8 @@
 package goovs
 
 import (
+	"fmt"
+	"log"
 	"net"
 	"reflect"
 	"strconv"
@@ -41,6 +43,8 @@ type OvsClient interface {
 	CreateVethPort(brname, portname string, vlantag int) error
 	DeletePort(brname, porname string) error
 	FindAllPortsOnBridge(brname string) ([]string, error)
+	PortExists(portname string) (bool, error)
+	RemoveInterfaceFromPort(portname, interfaceUUID string) error
 }
 
 type ovsClient struct {
@@ -89,6 +93,29 @@ func GetOVSClient(contype, endpoint string) (OvsClient, error) {
 
 	client = &ovsClient{dbClient: dbclient}
 	return client, nil
+}
+
+func (client *ovsClient) transact(operations []libovsdb.Operation, action string) error {
+	reply, _ := client.dbClient.Transact(defaultOvsDB, operations...)
+
+	if len(reply) < len(operations) {
+		return fmt.Errorf("%s failed due to Number of Replies should be at least equal to number of Operations", action)
+	}
+	ok := true
+	for i, o := range reply {
+		if o.Error != "" {
+			ok = false
+			if i < len(operations) {
+				return fmt.Errorf("%s transaction Failed due to an error : %s details: %s in %+v", action, o.Error, o.Details, operations[i])
+			}
+			return fmt.Errorf("%s transaction Failed due to an error :%s", action, o.Error)
+		}
+	}
+	if ok {
+		log.Println(action, "successful: ", reply[0].UUID.GoUuid)
+	}
+
+	return nil
 }
 
 /*

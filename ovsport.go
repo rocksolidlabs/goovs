@@ -3,6 +3,7 @@ package goovs
 import (
 	"fmt"
 	"log"
+	"reflect"
 	//"strings"
 
 	"github.com/kopwei/libovsdb"
@@ -72,45 +73,61 @@ func (client *ovsClient) createPort(brname, portname string, vlantag int, intf m
 	// simple mutate operation
 	mutateOp := libovsdb.Operation{
 		Op:        mutateOperation,
-		Table:     ovsTableName,
+		Table:     bridgeTableName,
 		Mutations: []interface{}{mutation},
 		Where:     []interface{}{condition},
 	}
 
 	operations := []libovsdb.Operation{insertInterfaceOp, insertPortOp, mutateOp}
-	reply, _ := client.dbClient.Transact(defaultOvsDB, operations...)
-
-	if len(reply) < len(operations) {
-		return fmt.Errorf("Number of Replies should be at least equal to number of Operations")
-	}
-	ok := true
-	for i, o := range reply {
-		if o.Error != "" {
-			ok = false
-			if i < len(operations) {
-				return fmt.Errorf("Transaction Failed due to an error : %s details: %s in %+v", o.Error, o.Details, operations[i])
-			}
-			return fmt.Errorf("Transaction Failed due to an error :%s", o.Error)
-		}
-	}
-	if ok {
-		log.Println("Veth Port Addition Successful : ", reply[0].UUID.GoUuid)
-	}
-
-	return nil
+	return client.transact(operations, "create port")
 }
 
 func (client *ovsClient) DeletePort(brname, portname string) error {
 	exists, err := client.PortExists(portname)
-	if !exists {
+	if err != nil {
+		return err
+	} else if !exists {
 		return nil
-	} else if err != nil {
-		return fmt.Errorf("Unable to retrieve the port info")
 	}
+	/*
+		err = client.deleteAllInterfaceOnPort(portname)
+		if err != nil {
+			return err
+		}
+	*/
 
+	portUUID, err := client.getPortUUIDByName(portname)
+	if err != nil {
+		return err
+	}
+	return client.deletePortByUUID(brname, portUUID)
+}
+
+func (client *ovsClient) deletePortByUUID(brname, portUUID string) error {
+	exists, err := client.portExistsByUUID(portUUID)
+	if err != nil {
+		return err
+	} else if !exists {
+		log.Println("Port with UUID ", portUUID, " doesn't exists")
+		return nil
+	}
+	/*
+		portname, err := client.getPortNameByUUID(portUUID)
+		if err != nil {
+			return err
+		}
+		err = client.deleteAllInterfaceOnPort(portname)
+		if err != nil {
+			return err
+		}
+	*/
+
+	portDeleteCondition := libovsdb.NewCondition("_uuid", "==", []string{"uuid", portUUID})
+	return deletePortOnBridge(brname, portDeleteCondition)
+}
+
+func deletePortOnBridge(brname string, portDeleteCondition []interface{}) error {
 	namedPortUUID := "goport"
-	portDeleteCondition := libovsdb.NewCondition("name", "==", portname)
-
 	portDeleteOp := libovsdb.Operation{
 		Op:    deleteOperation,
 		Table: portTableName,
@@ -126,54 +143,68 @@ func (client *ovsClient) DeletePort(brname, portname string) error {
 	// simple mutate operation
 	mutateOp := libovsdb.Operation{
 		Op:        mutateOperation,
-		Table:     ovsTableName,
+		Table:     bridgeTableName,
 		Mutations: []interface{}{mutation},
 		Where:     []interface{}{condition},
 	}
 
 	operations := []libovsdb.Operation{portDeleteOp, mutateOp}
-	reply, _ := client.dbClient.Transact(defaultOvsDB, operations...)
-
-	if len(reply) < len(operations) {
-		return fmt.Errorf("Number of Replies should be at least equal to number of Operations")
-	}
-	ok := true
-	for i, o := range reply {
-		if o.Error != "" {
-			ok = false
-			if i < len(operations) {
-				return fmt.Errorf("Transaction Failed due to an error : %s details: %s in %+v", o.Error, o.Details, operations[i])
-			}
-			return fmt.Errorf("Transaction Failed due to an error :%s", o.Error)
-		}
-	}
-	if ok {
-		log.Println("Port Deleting Successful : ", reply[0].UUID.GoUuid)
-	}
-
-	return nil
+	return client.transact(operations, "delete port")
 }
 
 func (client *ovsClient) PortExists(portname string) (bool, error) {
 	condition := libovsdb.NewCondition("name", "==", portname)
+	return client.selectPortInPortTable(condition)
+}
+
+func (client *ovsClient) portExistsByUUID(portUUID string) (bool, error) {
+	condition := libovsdb.NewCondition("_uuid", "==", []string{"uuid", portUUID})
+	return client.selectPortInPortTable(condition)
+}
+
+func (client *ovsClient) selectPortInPortTable(selectCondition []interface{}) (bool, error) {
 	selectOp := libovsdb.Operation{
 		Op:    selectOperation,
 		Table: portTableName,
-		Where: []interface{}{condition},
+		Where: []interface{}{selectCondition},
 	}
 	operations := []libovsdb.Operation{selectOp}
 	reply, _ := client.dbClient.Transact(defaultOvsDB, operations...)
 
 	if len(reply) < len(operations) {
-		return false, fmt.Errorf("Number of Replies should be at least equal to number of Operations")
+		return false, fmt.Errorf("find port in table failed due to Number of Replies should be at least equal to number of Operations")
 	}
 	if reply[0].Error != "" {
-		return false, fmt.Errorf("Transaction Failed due to an error: %v", reply[0].Error)
+		return false, fmt.Errorf("find port in table failed due to Transaction Failed due to an error: %v", reply[0].Error)
 	}
 	if len(reply[0].Rows) == 0 {
+		fmt.Println("The reply is empty, port not found")
 		return false, nil
 	}
 	return true, nil
+}
+
+func (client *ovsClient) deleteAllInterfaceOnPort(portname string) error {
+	portExists, err := client.PortExists(portname)
+	if err != nil {
+		return fmt.Errorf("Failed to retrieve the port info")
+	} else if !portExists {
+		return nil
+	}
+
+	interfaceList, err := client.findAllInterfaceUUIDOnPort(portname)
+	if err != nil {
+		return err
+	}
+	if len(interfaceList) != 0 {
+		for _, interfaceUUID := range interfaceList {
+			err = client.RemoveInterfaceFromPort(portname, interfaceUUID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (client *ovsClient) FindAllPortsOnBridge(brname string) ([]string, error) {
@@ -196,11 +227,19 @@ func (client *ovsClient) FindAllPortsOnBridge(brname string) ([]string, error) {
 		return nil, nil
 	}
 	var portUUIDs []string
-	portMap, _ := libovsdb.NewOvsSet(reply[0].Rows[0]["ports"])
-	// Here we pick index 1 since index 0 is string "Set"
-	portSet := portMap.GoSet[1].([]interface{})
+	portMap, _ := reply[0].Rows[0]["ports"]
 
-	for _, singleSet := range portSet {
+	// Here we pick index 1 since index 0 is string "Set"
+	portMapAsSlice := portMap.([]interface{})
+	portSet := portMapAsSlice[1]
+	v := reflect.ValueOf(portSet)
+	if v.Kind() == reflect.String {
+		portUUIDs = append(portUUIDs, portSet.(string))
+		return portUUIDs, nil
+	}
+
+	portSetAsSlice := portSet.([]interface{})
+	for _, singleSet := range portSetAsSlice {
 		for _, portInfo := range singleSet.([]interface{}) {
 			// Portinfo is a string with format: uuidXXXX (where XXX is the UUID of the port)
 			portID := portInfo.(string)[4:]
@@ -208,4 +247,49 @@ func (client *ovsClient) FindAllPortsOnBridge(brname string) ([]string, error) {
 		}
 	}
 	return portUUIDs, nil
+}
+
+func (client *ovsClient) getPortNameByUUID(portUUID string) (string, error) {
+	condition := libovsdb.NewCondition("_uuid", "==", []string{"uuid", portUUID})
+	selectOp := libovsdb.Operation{
+		Op:      selectOperation,
+		Table:   portTableName,
+		Where:   []interface{}{condition},
+		Columns: []string{"name"},
+	}
+	operations := []libovsdb.Operation{selectOp}
+	reply, _ := client.dbClient.Transact(defaultOvsDB, operations...)
+	if len(reply) < len(operations) {
+		return "", fmt.Errorf("Find port uuid by name failed due to Number of Replies should be at least equal to number of Operations")
+	}
+	if reply[0].Error != "" {
+		return "", fmt.Errorf("Find port uuid by name transaction Failed due to an error: %v", reply[0].Error)
+	}
+	if len(reply[0].Rows) == 0 {
+		return "", fmt.Errorf("Unable to find the port with uuid %s", portUUID)
+	}
+	answer := reply[0].Rows[0]["name"].([]interface{})[1].(string)
+	return answer, nil
+}
+
+func (client *ovsClient) getPortUUIDByName(portname string) (string, error) {
+	condition := libovsdb.NewCondition("name", "==", portname)
+	selectOp := libovsdb.Operation{
+		Op:    selectOperation,
+		Table: portTableName,
+		Where: []interface{}{condition},
+	}
+	operations := []libovsdb.Operation{selectOp}
+	reply, _ := client.dbClient.Transact(defaultOvsDB, operations...)
+	if len(reply) < len(operations) {
+		return "", fmt.Errorf("Find port name by uuid failed due to Number of Replies should be at least equal to number of Operations")
+	}
+	if reply[0].Error != "" {
+		return "", fmt.Errorf("Find port name by uuid transaction Failed due to an error: %v", reply[0].Error)
+	}
+	if len(reply[0].Rows) == 0 {
+		return "", fmt.Errorf("Unable to find the port with name %s", portname)
+	}
+	answer := reply[0].Rows[0]["_uuid"].([]interface{})[1].(string)
+	return answer, nil
 }
