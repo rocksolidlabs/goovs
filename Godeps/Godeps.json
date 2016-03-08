@@ -1,0 +1,23 @@
+{
+	"ImportPath": "github.com/kopwei/goovs",
+	"GoVersion": "go1.6",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/cenkalti/hub",
+			"Comment": "v1.0.0-14-g57d753b",
+			"Rev": "57d753b5f4856e77b3cf8ecce78c97215a7d324d"
+		},
+		{
+			"ImportPath": "github.com/cenkalti/rpc2",
+			"Rev": "2d1be381ce47537e9e076b2b76dc70933162e4e9"
+		},
+		{
+			"ImportPath": "github.com/kopwei/libovsdb",
+			"Comment": "v0.1-2-g16d51da",
+			"Rev": "16d51daccdc65015d7a0fcc8fac27fe13507335e"
+		}
+	]
+}
