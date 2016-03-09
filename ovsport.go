@@ -30,7 +30,7 @@ func (client *ovsClient) CreatePatchPort(brname, portname, peername string) erro
 }
 
 // CreateVethPort ...
-func (client *ovsClient) CreateVethPort(brname, portname string, vlantag int) error {
+func (client *ovsClient) CreateVethPort(brname, portname string) error {
 	// intf row to insert
 	intf := make(map[string]interface{})
 	intf["name"] = portname

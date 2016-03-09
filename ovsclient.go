@@ -40,7 +40,7 @@ type OvsClient interface {
 	CreateBridge(brname string) error
 	DeleteBridge(brname string) error
 	CreateInternalPort(brname, portname string, vlantag int) error
-	CreateVethPort(brname, portname string, vlantag int) error
+	CreateVethPort(brname, portname string) error
 	DeletePort(brname, porname string) error
 	FindAllPortsOnBridge(brname string) ([]string, error)
 	PortExists(portname string) (bool, error)
