@@ -2,7 +2,6 @@ package goovs
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	//"strings"
 
@@ -89,12 +88,6 @@ func (client *ovsClient) DeletePort(brname, portname string) error {
 	} else if !exists {
 		return nil
 	}
-	/*
-		err = client.deleteAllInterfaceOnPort(portname)
-		if err != nil {
-			return err
-		}
-	*/
 
 	portUUID, err := client.getPortUUIDByName(portname)
 	if err != nil {
@@ -104,30 +97,7 @@ func (client *ovsClient) DeletePort(brname, portname string) error {
 }
 
 func (client *ovsClient) deletePortByUUID(brname, portUUID string) error {
-	exists, err := client.portExistsByUUID(portUUID)
-	if err != nil {
-		return err
-	} else if !exists {
-		log.Println("Port with UUID ", portUUID, " doesn't exists")
-		return nil
-	}
-	/*
-		portname, err := client.getPortNameByUUID(portUUID)
-		if err != nil {
-			return err
-		}
-		err = client.deleteAllInterfaceOnPort(portname)
-		if err != nil {
-			return err
-		}
-	*/
-
 	portDeleteCondition := libovsdb.NewCondition("_uuid", "==", []string{"uuid", portUUID})
-	return deletePortOnBridge(brname, portDeleteCondition)
-}
-
-func deletePortOnBridge(brname string, portDeleteCondition []interface{}) error {
-	namedPortUUID := "goport"
 	portDeleteOp := libovsdb.Operation{
 		Op:    deleteOperation,
 		Table: portTableName,
@@ -135,7 +105,7 @@ func deletePortOnBridge(brname string, portDeleteCondition []interface{}) error 
 	}
 
 	// Inserting a Port row in Port table requires mutating the Bridge table
-	mutateUUID := []libovsdb.UUID{libovsdb.UUID{namedPortUUID}}
+	mutateUUID := []libovsdb.UUID{libovsdb.UUID{portUUID}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUUID)
 	mutation := libovsdb.NewMutation("ports", deleteOperation, mutateSet)
 	condition := libovsdb.NewCondition("name", "==", brname)
