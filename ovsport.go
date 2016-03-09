@@ -24,7 +24,9 @@ func (client *ovsClient) CreatePatchPort(brname, portname, peername string) erro
 	intf := make(map[string]interface{})
 	intf["name"] = portname
 	intf["type"] = `patch`
-	intf["options"] = fmt.Sprintf("{peer=%s}", peername)
+	options := make(map[string]interface{})
+	options["peer"] = peername
+	intf["options"], _ = libovsdb.NewOvsMap(options)
 
 	return client.createPort(brname, portname, 0, intf)
 }
