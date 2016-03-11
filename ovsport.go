@@ -41,6 +41,12 @@ func (client *ovsClient) CreateVethPort(brname, portname string, vlantag int) er
 }
 
 func (client *ovsClient) createPort(brname, portname string, vlantag int, intf map[string]interface{}) error {
+	portExists, err := client.PortExists(portname)
+	if err != nil {
+		return fmt.Errorf("Failed to retrieve the port info")
+	} else if portExists {
+		return nil
+	}
 	namedPortUUID := "goport"
 	namedInterfaceUUID := "gointerface"
 
