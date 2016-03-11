@@ -32,12 +32,12 @@ func (client *ovsClient) CreatePatchPort(brname, portname, peername string) erro
 }
 
 // CreateVethPort ...
-func (client *ovsClient) CreateVethPort(brname, portname string) error {
+func (client *ovsClient) CreateVethPort(brname, portname string, vlantag int) error {
 	// intf row to insert
 	intf := make(map[string]interface{})
 	intf["name"] = portname
 	intf["type"] = `system`
-	return client.createPort(brname, portname, 0, intf)
+	return client.createPort(brname, portname, vlantag, intf)
 }
 
 func (client *ovsClient) createPort(brname, portname string, vlantag int, intf map[string]interface{}) error {
@@ -54,7 +54,7 @@ func (client *ovsClient) createPort(brname, portname string, vlantag int, intf m
 	// port row to insert
 	port := make(map[string]interface{})
 	port["name"] = portname
-	port["interfaces"] = libovsdb.UUID{namedInterfaceUUID}
+	port["interfaces"] = libovsdb.UUID{GoUuid: namedInterfaceUUID}
 	if vlantag > 0 && vlantag <= 4095 {
 		port["tag"] = vlantag
 	}
@@ -66,7 +66,7 @@ func (client *ovsClient) createPort(brname, portname string, vlantag int, intf m
 		UUIDName: namedPortUUID,
 	}
 	// Inserting a Port row in Port table requires mutating the Bridge table
-	mutateUUID := []libovsdb.UUID{libovsdb.UUID{namedPortUUID}}
+	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUuid: namedPortUUID}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUUID)
 	mutation := libovsdb.NewMutation("ports", insertOperation, mutateSet)
 	condition := libovsdb.NewCondition("name", "==", brname)
@@ -107,7 +107,7 @@ func (client *ovsClient) deletePortByUUID(brname, portUUID string) error {
 	}
 
 	// Inserting a Port row in Port table requires mutating the Bridge table
-	mutateUUID := []libovsdb.UUID{libovsdb.UUID{portUUID}}
+	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUuid: portUUID}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUUID)
 	mutation := libovsdb.NewMutation("ports", deleteOperation, mutateSet)
 	condition := libovsdb.NewCondition("name", "==", brname)
