@@ -36,7 +36,7 @@ func (client *ovsClient) CreateVethPort(brname, portname string, vlantag int) er
 	// intf row to insert
 	intf := make(map[string]interface{})
 	intf["name"] = portname
-	intf["type"] = `system`
+	//intf["type"] = `system`
 	return client.createPort(brname, portname, vlantag, intf)
 }
 
