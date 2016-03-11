@@ -41,9 +41,9 @@ func (client *ovsClient) CreateVethPort(brname, portname string, vlantag int) er
 }
 
 func (client *ovsClient) createPort(brname, portname string, vlantag int, intf map[string]interface{}) error {
-	portExists, err := client.PortExists(portname)
+	portExists, err := client.PortExistsOnBridge(portname, brname)
 	if err != nil {
-		return fmt.Errorf("Failed to retrieve the port info")
+		return fmt.Errorf("Failed to retrieve the port info due to %s", err.Error())
 	} else if portExists {
 		return nil
 	}
@@ -90,7 +90,7 @@ func (client *ovsClient) createPort(brname, portname string, vlantag int, intf m
 }
 
 func (client *ovsClient) DeletePort(brname, portname string) error {
-	exists, err := client.PortExists(portname)
+	exists, err := client.PortExistsOnBridge(portname, brname)
 	if err != nil {
 		return err
 	} else if !exists {
@@ -130,9 +130,24 @@ func (client *ovsClient) deletePortByUUID(brname, portUUID string) error {
 	return client.transact(operations, "delete port")
 }
 
-func (client *ovsClient) PortExists(portname string) (bool, error) {
-	condition := libovsdb.NewCondition("name", "==", portname)
-	return client.selectPortInPortTable(condition)
+func (client *ovsClient) PortExistsOnBridge(portname, brname string) (bool, error) {
+	portUUIDs, err := client.FindAllPortsOnBridge(brname)
+	if err != nil {
+		return false, nil
+	} else if len(portUUIDs) == 0 {
+		return false, nil
+	}
+	for _, portUUID := range portUUIDs {
+		portName, err := client.getPortNameByUUID(portUUID)
+		if err != nil {
+			//fmt.Printf("Failed to get port name by uuid %s\n", portUUID)
+			return false, err
+		}
+		if portName == portname {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (client *ovsClient) portExistsByUUID(portUUID string) (bool, error) {
@@ -162,29 +177,6 @@ func (client *ovsClient) selectPortInPortTable(selectCondition []interface{}) (b
 	return true, nil
 }
 
-func (client *ovsClient) deleteAllInterfaceOnPort(portname string) error {
-	portExists, err := client.PortExists(portname)
-	if err != nil {
-		return fmt.Errorf("Failed to retrieve the port info")
-	} else if !portExists {
-		return nil
-	}
-
-	interfaceList, err := client.findAllInterfaceUUIDOnPort(portname)
-	if err != nil {
-		return err
-	}
-	if len(interfaceList) != 0 {
-		for _, interfaceUUID := range interfaceList {
-			err = client.RemoveInterfaceFromPort(portname, interfaceUUID)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 func (client *ovsClient) FindAllPortsOnBridge(brname string) ([]string, error) {
 	condition := libovsdb.NewCondition("name", "==", brname)
 	selectOp := libovsdb.Operation{
@@ -202,6 +194,7 @@ func (client *ovsClient) FindAllPortsOnBridge(brname string) ([]string, error) {
 		return nil, fmt.Errorf("Transaction Failed due to an error: %v", reply[0].Error)
 	}
 	if len(reply[0].Rows) == 0 {
+		//fmt.Printf("No ports found on bridge %s\n", brname)
 		return nil, nil
 	}
 	var portUUIDs []string
@@ -212,6 +205,7 @@ func (client *ovsClient) FindAllPortsOnBridge(brname string) ([]string, error) {
 	portSet := portMapAsSlice[1]
 	v := reflect.ValueOf(portSet)
 	if v.Kind() == reflect.String {
+		//fmt.Printf("One ports %s found on bridge %s\n", portSet.(string), brname)
 		portUUIDs = append(portUUIDs, portSet.(string))
 		return portUUIDs, nil
 	}
@@ -219,11 +213,13 @@ func (client *ovsClient) FindAllPortsOnBridge(brname string) ([]string, error) {
 	portSetAsSlice := portSet.([]interface{})
 	for _, singleSet := range portSetAsSlice {
 		for _, portInfo := range singleSet.([]interface{}) {
-			// Portinfo is a string with format: uuidXXXX (where XXX is the UUID of the port)
-			portID := portInfo.(string)[4:]
-			portUUIDs = append(portUUIDs, portID)
+			if len(portInfo.(string)) > 4 {
+				portID := portInfo.(string)
+				portUUIDs = append(portUUIDs, portID)
+			}
 		}
 	}
+	//fmt.Printf("There are %d ports found on bridge %s and they are %+v\n", len(portUUIDs), brname, portUUIDs)
 	return portUUIDs, nil
 }
 
@@ -246,7 +242,8 @@ func (client *ovsClient) getPortNameByUUID(portUUID string) (string, error) {
 	if len(reply[0].Rows) == 0 {
 		return "", fmt.Errorf("Unable to find the port with uuid %s", portUUID)
 	}
-	answer := reply[0].Rows[0]["name"].([]interface{})[1].(string)
+	answer := reply[0].Rows[0]["name"].(string)
+	//fmt.Printf("Port name %s is found for port with uuid %s\n", answer, portUUID)
 	return answer, nil
 }
 

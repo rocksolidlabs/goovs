@@ -43,7 +43,7 @@ type OvsClient interface {
 	CreatePatchPort(brname, portname, peername string) error
 	DeletePort(brname, porname string) error
 	FindAllPortsOnBridge(brname string) ([]string, error)
-	PortExists(portname string) (bool, error)
+	PortExistsOnBridge(portname, brname string) (bool, error)
 	RemoveInterfaceFromPort(portname, interfaceUUID string) error
 }
 

@@ -24,28 +24,31 @@ func main() {
 
 	err = client.CreateBridge(brName)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Fatal(err.Error())
 	}
 
 	err = client.CreateBridge(peerBrName)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Fatal(err.Error())
 	}
 
 	err = client.CreateInternalPort(brName, internalPortName, internalPortTag)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Fatal(err.Error())
 	}
+	fmt.Printf("Successfully created the internal port %s\n", internalPortName)
 
 	err = client.CreatePatchPort(brName, peerPortNameOnDummyBr, peerPortNameOnPeerBr)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+	fmt.Printf("Successfully created the patch port %s\n", peerPortNameOnDummyBr)
 
 	err = client.CreatePatchPort(peerBrName, peerPortNameOnPeerBr, peerPortNameOnDummyBr)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+	fmt.Printf("Successfully created the patch port %s\n", peerPortNameOnPeerBr)
 
 	// Create a veth pair
 	_, err = exec.Command("ip", "link", "add", "vethA", "type", "veth", "peer", "name", "vethB").Output()
@@ -68,7 +71,7 @@ func main() {
 		fmt.Println(p)
 	}
 
-	_, err = client.PortExists(brName)
+	_, err = client.PortExistsOnBridge(brName, brName)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
