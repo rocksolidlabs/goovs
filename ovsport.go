@@ -156,7 +156,7 @@ func (client *ovsClient) selectPortInPortTable(selectCondition []interface{}) (b
 		return false, fmt.Errorf("find port in table failed due to Transaction Failed due to an error: %v", reply[0].Error)
 	}
 	if len(reply[0].Rows) == 0 {
-		fmt.Println("The reply is empty, port not found")
+		// fmt.Println("The reply is empty, port not found")
 		return false, nil
 	}
 	return true, nil

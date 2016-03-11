@@ -2,7 +2,6 @@ package goovs
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"reflect"
 	"strconv"
@@ -102,19 +101,19 @@ func (client *ovsClient) transact(operations []libovsdb.Operation, action string
 	if len(reply) < len(operations) {
 		return fmt.Errorf("%s failed due to Number of Replies should be at least equal to number of Operations", action)
 	}
-	ok := true
+	//ok := true
 	for i, o := range reply {
 		if o.Error != "" {
-			ok = false
+			//ok = false
 			if i < len(operations) {
 				return fmt.Errorf("%s transaction Failed due to an error : %s details: %s in %+v", action, o.Error, o.Details, operations[i])
 			}
 			return fmt.Errorf("%s transaction Failed due to an error :%s", action, o.Error)
 		}
 	}
-	if ok {
-		log.Println(action, "successful: ", reply[0].UUID.GoUuid)
-	}
+	//if ok {
+	//	log.Println(action, "successful: ", reply[0].UUID.GoUuid)
+	//}
 
 	return nil
 }

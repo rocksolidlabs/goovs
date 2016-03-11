@@ -108,7 +108,7 @@ func (client *ovsClient) interfaceUUIDExists(interfaceUUID string) (bool, error)
 		return false, fmt.Errorf("Transaction Failed due to an error: %v", reply[0].Error)
 	}
 	if len(reply[0].Rows) == 0 {
-		fmt.Println("The reply is empty, interface not found")
+		//fmt.Println("The reply is empty, interface not found")
 		return false, nil
 	}
 	return true, nil

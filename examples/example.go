@@ -53,7 +53,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = client.CreateVethPort(brName, "vethA")
+	err = client.CreateVethPort(brName, "vethA", 0)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
