@@ -42,7 +42,7 @@ type OvsClient interface {
 	CreateVethPort(brname, portname string, vlantag int) error
 	CreatePatchPort(brname, portname, peername string) error
 	DeletePort(brname, porname string) error
-	FindAllPortsOnBridge(brname string) ([]string, error)
+	FindAllPortUUIDsOnBridge(brname string) ([]string, error)
 	PortExistsOnBridge(portname, brname string) (bool, error)
 	RemoveInterfaceFromPort(portname, interfaceUUID string) error
 }

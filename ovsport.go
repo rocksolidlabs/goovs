@@ -131,7 +131,7 @@ func (client *ovsClient) deletePortByUUID(brname, portUUID string) error {
 }
 
 func (client *ovsClient) PortExistsOnBridge(portname, brname string) (bool, error) {
-	portUUIDs, err := client.FindAllPortsOnBridge(brname)
+	portUUIDs, err := client.FindAllPortUUIDsOnBridge(brname)
 	if err != nil {
 		return false, nil
 	} else if len(portUUIDs) == 0 {
@@ -177,7 +177,7 @@ func (client *ovsClient) selectPortInPortTable(selectCondition []interface{}) (b
 	return true, nil
 }
 
-func (client *ovsClient) FindAllPortsOnBridge(brname string) ([]string, error) {
+func (client *ovsClient) FindAllPortUUIDsOnBridge(brname string) ([]string, error) {
 	condition := libovsdb.NewCondition("name", "==", brname)
 	selectOp := libovsdb.Operation{
 		Op:      selectOperation,

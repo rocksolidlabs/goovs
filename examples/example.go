@@ -61,7 +61,7 @@ func main() {
 		fmt.Println(err.Error())
 	}
 
-	ports, err := client.FindAllPortsOnBridge(brName)
+	ports, err := client.FindAllPortUUIDsOnBridge(brName)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
