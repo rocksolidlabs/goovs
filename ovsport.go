@@ -306,23 +306,9 @@ func (client *ovsClient) UpdatePortTagByUUID(portUUID string, vlantag int) error
 	updateOp := libovsdb.Operation{
 		Op:    updateOperation,
 		Table: portTableName,
+		Row:   port,
 		Where: []interface{}{updateCondition},
 	}
-
-	// Inserting a Port row in Port table requires mutating the Bridge table
-	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUuid: portUUID}}
-	mutateSet, _ := libovsdb.NewOvsSet(mutateUUID)
-	mutation := libovsdb.NewMutation("ports", updateOperation, mutateSet)
-	condition := libovsdb.NewCondition("_uuid", "==", []string{"uuid", portUUID})
-
-	// simple mutate operation
-	mutateOp := libovsdb.Operation{
-		Op:        mutateOperation,
-		Table:     bridgeTableName,
-		Mutations: []interface{}{mutation},
-		Where:     []interface{}{condition},
-	}
-
-	operations := []libovsdb.Operation{updateOp, mutateOp}
+	operations := []libovsdb.Operation{updateOp}
 	return client.transact(operations, "update port")
 }

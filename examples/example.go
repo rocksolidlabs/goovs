@@ -84,7 +84,6 @@ func main() {
 	}
 
 	// Cleanup
-
 	err = client.DeletePort(brName, brName)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -99,7 +98,6 @@ func main() {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-
 	_, err = exec.Command("ip", "link", "delete", "vethA").Output()
 	if err != nil {
 		log.Fatal(err)
