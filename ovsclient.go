@@ -32,6 +32,7 @@ const (
 	insertOperation = "insert"
 	mutateOperation = "mutate"
 	selectOperation = "select"
+	updateOperation = "update"
 )
 
 // OvsClient is the interface towards outside user
@@ -42,6 +43,8 @@ type OvsClient interface {
 	CreateVethPort(brname, portname string, vlantag int) error
 	CreatePatchPort(brname, portname, peername string) error
 	DeletePort(brname, porname string) error
+	UpdatePortTagByName(brname, portname string, vlantag int) error
+	UpdatePortTagByUUID(portUUID string, vlantag int) error
 	FindAllPortUUIDsOnBridge(brname string) ([]string, error)
 	PortExistsOnBridge(portname, brname string) (bool, error)
 	RemoveInterfaceFromPort(portname, interfaceUUID string) error

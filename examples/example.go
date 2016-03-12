@@ -60,6 +60,13 @@ func main() {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+	fmt.Printf("Successfully created the veth port %s\n", "vethA")
+
+	err = client.UpdatePortTagByName(brName, "vethA", 10)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Printf("Successfully updated the veth port %s's tag value to %d\n", "vethA", 10)
 
 	ports, err := client.FindAllPortUUIDsOnBridge(brName)
 	if err != nil {

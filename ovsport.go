@@ -268,3 +268,61 @@ func (client *ovsClient) getPortUUIDByName(portname string) (string, error) {
 	answer := reply[0].Rows[0]["_uuid"].([]interface{})[1].(string)
 	return answer, nil
 }
+
+func (client *ovsClient) UpdatePortTagByName(brname, portname string, vlantag int) error {
+	if vlantag < 0 || vlantag > 4095 {
+		return fmt.Errorf("The vlan tag value is not in valid range")
+	}
+	portExist, err := client.PortExistsOnBridge(portname, brname)
+	if err != nil {
+		return err
+	}
+	if !portExist {
+		return fmt.Errorf("The port %s doesn't exists on bridge %s", portname, brname)
+	}
+	portUUID, err := client.getPortUUIDByName(portname)
+	if err != nil {
+		return err
+	}
+	return client.UpdatePortTagByUUID(portUUID, vlantag)
+}
+
+func (client *ovsClient) UpdatePortTagByUUID(portUUID string, vlantag int) error {
+	if vlantag < 0 || vlantag > 4095 {
+		return fmt.Errorf("The vlan tag value is not in valid range")
+	}
+	portExist, err := client.portExistsByUUID(portUUID)
+	if err != nil {
+		return err
+	}
+	if !portExist {
+		return fmt.Errorf("The port with UUID %s doesn't exists", portUUID)
+	}
+	updateCondition := libovsdb.NewCondition("_uuid", "==", []string{"uuid", portUUID})
+	// port row to update
+	port := make(map[string]interface{})
+	port["tag"] = vlantag
+
+	updateOp := libovsdb.Operation{
+		Op:    updateOperation,
+		Table: portTableName,
+		Where: []interface{}{updateCondition},
+	}
+
+	// Inserting a Port row in Port table requires mutating the Bridge table
+	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUuid: portUUID}}
+	mutateSet, _ := libovsdb.NewOvsSet(mutateUUID)
+	mutation := libovsdb.NewMutation("ports", updateOperation, mutateSet)
+	condition := libovsdb.NewCondition("_uuid", "==", []string{"uuid", portUUID})
+
+	// simple mutate operation
+	mutateOp := libovsdb.Operation{
+		Op:        mutateOperation,
+		Table:     bridgeTableName,
+		Mutations: []interface{}{mutation},
+		Where:     []interface{}{condition},
+	}
+
+	operations := []libovsdb.Operation{updateOp, mutateOp}
+	return client.transact(operations, "update port")
+}
