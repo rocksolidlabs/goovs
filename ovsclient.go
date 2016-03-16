@@ -37,6 +37,7 @@ const (
 
 // OvsClient is the interface towards outside user
 type OvsClient interface {
+	BridgeExists(brname string) (bool, error)
 	CreateBridge(brname string) error
 	DeleteBridge(brname string) error
 	CreateInternalPort(brname, portname string, vlantag int) error

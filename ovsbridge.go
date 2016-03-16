@@ -138,6 +138,10 @@ func (client *ovsClient) deleteAllPortsOnBridge(brname string) error {
 
 // BridgeExists is used to check if a bridge exists or not
 func (client *ovsClient) BridgeExists(brname string) (bool, error) {
+	// if bridge name is invalid, return false
+	if brname == "" {
+		return false, fmt.Errorf("The bridge name is invalid")
+	}
 	condition := libovsdb.NewCondition("name", "==", brname)
 	selectOp := libovsdb.Operation{
 		Op:    selectOperation,
