@@ -121,7 +121,7 @@ func (client *ovsClient) deleteAllPortsOnBridge(brname string) error {
 		return nil
 	}
 
-	portList, err := client.FindAllPortUUIDsOnBridge(brname)
+	portList, err := client.findAllPortUUIDsOnBridge(brname)
 	if err != nil {
 		return err
 	}

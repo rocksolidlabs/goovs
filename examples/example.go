@@ -68,7 +68,7 @@ func main() {
 	}
 	fmt.Printf("Successfully updated the veth port %s's tag value to %d\n", "vethA", 10)
 
-	ports, err := client.FindAllPortUUIDsOnBridge(brName)
+	ports, err := client.FindAllPortsOnBridge(brName)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -82,25 +82,30 @@ func main() {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+	fmt.Printf("Port %s exists on bridge %s\n", brName, brName)
 
 	// Cleanup
 	err = client.DeletePort(brName, brName)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+	fmt.Printf("Successfully delete port %s from bridge %s\n", brName, brName)
 
 	err = client.DeleteBridge(brName)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+	fmt.Printf("Successfully deleted bridge %s\n", brName)
 
 	err = client.DeleteBridge(peerBrName)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+	fmt.Printf("Successfully deleted bridge %s\n", peerBrName)
 	_, err = exec.Command("ip", "link", "delete", "vethA").Output()
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Printf("Successfully removed ip link %s\n", "vethA")
 
 }

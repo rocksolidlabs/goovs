@@ -46,7 +46,7 @@ type OvsClient interface {
 	DeletePort(brname, porname string) error
 	UpdatePortTagByName(brname, portname string, vlantag int) error
 	UpdatePortTagByUUID(portUUID string, vlantag int) error
-	FindAllPortUUIDsOnBridge(brname string) ([]string, error)
+	FindAllPortsOnBridge(brname string) ([]string, error)
 	PortExistsOnBridge(portname, brname string) (bool, error)
 	RemoveInterfaceFromPort(portname, interfaceUUID string) error
 }
