@@ -303,10 +303,10 @@ func (client *ovsClient) UpdatePortTagByName(brname, portname string, vlantag in
 	if err != nil {
 		return err
 	}
-	return client.UpdatePortTagByUUID(portUUID, vlantag)
+	return client.updatePortTagByUUID(portUUID, vlantag)
 }
 
-func (client *ovsClient) UpdatePortTagByUUID(portUUID string, vlantag int) error {
+func (client *ovsClient) updatePortTagByUUID(portUUID string, vlantag int) error {
 	if vlantag < 0 || vlantag > 4095 {
 		return fmt.Errorf("The vlan tag value is not in valid range")
 	}
