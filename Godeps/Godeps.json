@@ -16,8 +16,8 @@
 		},
 		{
 			"ImportPath": "github.com/kopwei/libovsdb",
-			"Comment": "v0.1-2-g16d51da",
-			"Rev": "16d51daccdc65015d7a0fcc8fac27fe13507335e"
+			"Comment": "v0.1-5-g6b8c174",
+			"Rev": "6b8c1740034c601c462bea2455d4b8e7c83907f4"
 		}
 	]
 }
