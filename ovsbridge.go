@@ -167,6 +167,60 @@ func (client *ovsClient) BridgeExists(brname string) (bool, error) {
 	return true, nil
 }
 
+func (client *ovsClient) UpdateBridgeController(brname, controller string) error {
+	bridgeUpdateLock.Lock()
+	defer bridgeUpdateLock.Unlock()
+	bridgeExists, err := client.BridgeExists(brname)
+	if err != nil {
+		return fmt.Errorf("Failed to retrieve the bridge info")
+	} else if !bridgeExists {
+		return nil
+	}
+
+	bridgeUUID, err := client.getBridgeUUIDByName(brname)
+	if err != nil {
+		return err
+	}
+
+	namedControllerUUID := "gocontroller"
+	ctrler := make(map[string]interface{})
+	ctrler["target"] = controller
+
+	insertControllerOp := libovsdb.Operation{
+		Op:       insertOperation,
+		Table:    controllerTableName,
+		Row:      ctrler,
+		UUIDName: namedControllerUUID,
+	}
+	bridge := make(map[string]interface{})
+	bridge["controller"] = libovsdb.UUID{GoUuid: namedControllerUUID}
+
+	updateBrCondition := libovsdb.NewCondition("name", "==", brname)
+	updateOp := libovsdb.Operation{
+		Op:    updateOperation,
+		Table: bridgeTableName,
+		Row:   bridge,
+		Where: []interface{}{updateBrCondition},
+	}
+
+	// Update a Bridge row in Bridge table requires mutating the open_vswitch table
+	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUuid: namedControllerUUID}}
+	mutateSet, _ := libovsdb.NewOvsSet(mutateUUID)
+	mutation := libovsdb.NewMutation("controller", insertOperation, mutateSet)
+	condition := libovsdb.NewCondition("_uuid", "==", libovsdb.UUID{GoUuid: bridgeUUID})
+
+	// simple mutate operation
+	mutateOp := libovsdb.Operation{
+		Op:        mutateOperation,
+		Table:     bridgeTableName,
+		Mutations: []interface{}{mutation},
+		Where:     []interface{}{condition},
+	}
+
+	operations := []libovsdb.Operation{insertControllerOp, updateOp, mutateOp}
+	return client.transact(operations, "update bridge controller")
+}
+
 func (client *ovsClient) getBridgeUUIDByName(brname string) (string, error) {
 	condition := libovsdb.NewCondition("name", "==", brname)
 	selectOp := libovsdb.Operation{

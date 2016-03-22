@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os/exec"
 
@@ -11,7 +10,7 @@ import (
 func main() {
 	client, err := goovs.GetOVSClient("unix", "")
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 		return
 	}
 	brName := "br-dummy"
@@ -26,29 +25,37 @@ func main() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+	log.Printf("Successfully created the bridge %s", brName)
 
 	err = client.CreateBridge(peerBrName)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+	log.Printf("Successfully created the bridge %s", peerBrName)
+
+	err = client.UpdateBridgeController(peerBrName, "tcp:127.0.0.1:6633")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	log.Printf("Successfully set the bridge controller")
 
 	err = client.CreateInternalPort(brName, internalPortName, internalPortTag)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	fmt.Printf("Successfully created the internal port %s\n", internalPortName)
+	log.Printf("Successfully created the internal port %s\n", internalPortName)
 
 	err = client.CreatePatchPort(brName, peerPortNameOnDummyBr, peerPortNameOnPeerBr)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	fmt.Printf("Successfully created the patch port %s\n", peerPortNameOnDummyBr)
+	log.Printf("Successfully created the patch port %s\n", peerPortNameOnDummyBr)
 
 	err = client.CreatePatchPort(peerBrName, peerPortNameOnPeerBr, peerPortNameOnDummyBr)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	fmt.Printf("Successfully created the patch port %s\n", peerPortNameOnPeerBr)
+	log.Printf("Successfully created the patch port %s\n", peerPortNameOnPeerBr)
 
 	// Create a veth pair
 	_, err = exec.Command("ip", "link", "add", "vethA", "type", "veth", "peer", "name", "vethB").Output()
@@ -58,54 +65,55 @@ func main() {
 
 	err = client.CreateVethPort(brName, "vethA", 0)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 	}
-	fmt.Printf("Successfully created the veth port %s\n", "vethA")
+	log.Printf("Successfully created the veth port %s\n", "vethA")
 
 	err = client.UpdatePortTagByName(brName, "vethA", 10)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 	}
-	fmt.Printf("Successfully updated the veth port %s's tag value to %d\n", "vethA", 10)
+	log.Printf("Successfully updated the veth port %s's tag value to %d\n", "vethA", 10)
 
 	ports, err := client.FindAllPortsOnBridge(brName)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 		return
 	}
-	fmt.Println("All ports on br-dummy are:")
+	log.Println("All ports on br-dummy are:")
 	for _, p := range ports {
-		fmt.Println(p)
+		log.Println(p)
 	}
 
 	_, err = client.PortExistsOnBridge(brName, brName)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 	}
-	fmt.Printf("Port %s exists on bridge %s\n", brName, brName)
+	log.Printf("Port %s exists on bridge %s\n", brName, brName)
 
 	// Cleanup
+
 	err = client.DeletePort(brName, brName)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 	}
-	fmt.Printf("Successfully delete port %s from bridge %s\n", brName, brName)
+	log.Printf("Successfully delete port %s from bridge %s\n", brName, brName)
 
 	err = client.DeleteBridge(brName)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 	}
-	fmt.Printf("Successfully deleted bridge %s\n", brName)
+	log.Printf("Successfully deleted bridge %s\n", brName)
 
 	err = client.DeleteBridge(peerBrName)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 	}
-	fmt.Printf("Successfully deleted bridge %s\n", peerBrName)
+	log.Printf("Successfully deleted bridge %s\n", peerBrName)
 	_, err = exec.Command("ip", "link", "delete", "vethA").Output()
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Successfully removed ip link %s\n", "vethA")
+	log.Printf("Successfully removed ip link %s\n", "vethA")
 
 }

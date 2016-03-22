@@ -21,10 +21,11 @@ const (
 )
 
 const (
-	ovsTableName       = "Open_vSwitch"
-	bridgeTableName    = "Bridge"
-	portTableName      = "Port"
-	interfaceTableName = "Interface"
+	ovsTableName        = "Open_vSwitch"
+	bridgeTableName     = "Bridge"
+	portTableName       = "Port"
+	interfaceTableName  = "Interface"
+	controllerTableName = "Controller"
 	//flowTableName = ""
 )
 
@@ -41,6 +42,7 @@ type OvsClient interface {
 	BridgeExists(brname string) (bool, error)
 	CreateBridge(brname string) error
 	DeleteBridge(brname string) error
+	UpdateBridgeController(brname, controller string) error
 	CreateInternalPort(brname, portname string, vlantag int) error
 	CreateVethPort(brname, portname string, vlantag int) error
 	CreatePatchPort(brname, portname, peername string) error
