@@ -5,6 +5,7 @@ import (
 	"net"
 	"reflect"
 	"strconv"
+	"sync"
 
 	"github.com/kopwei/libovsdb"
 )
@@ -57,6 +58,9 @@ type ovsClient struct {
 var client *ovsClient
 var update chan *libovsdb.TableUpdates
 var cache map[string]map[string]libovsdb.Row
+var bridgeUpdateLock sync.RWMutex
+var portUpdateLock sync.RWMutex
+var intfUpdateLock sync.RWMutex
 
 // GetOVSClient is used for
 func GetOVSClient(contype, endpoint string) (OvsClient, error) {

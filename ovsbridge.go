@@ -8,6 +8,8 @@ import (
 
 // CreateBridge is used to create a ovs bridge
 func (client *ovsClient) CreateBridge(brname string) error {
+	bridgeUpdateLock.Lock()
+	defer bridgeUpdateLock.Unlock()
 	bridgeExists, err := client.BridgeExists(brname)
 	if err != nil {
 		return fmt.Errorf("Failed to retrieve the bridge info")
@@ -77,6 +79,8 @@ func (client *ovsClient) CreateBridge(brname string) error {
 
 // DeleteBridge is used to delete a ovs bridge
 func (client *ovsClient) DeleteBridge(brname string) error {
+	bridgeUpdateLock.Lock()
+	defer bridgeUpdateLock.Unlock()
 	bridgeExists, err := client.BridgeExists(brname)
 	if err != nil {
 		return fmt.Errorf("Failed to retrieve the bridge info")

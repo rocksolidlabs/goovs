@@ -41,6 +41,8 @@ func (client *ovsClient) CreateVethPort(brname, portname string, vlantag int) er
 }
 
 func (client *ovsClient) createPort(brname, portname string, vlantag int, intf map[string]interface{}) error {
+	portUpdateLock.Lock()
+	defer portUpdateLock.Unlock()
 	portExists, err := client.PortExistsOnBridge(portname, brname)
 	if err != nil {
 		return fmt.Errorf("Failed to retrieve the port info due to %s", err.Error())
@@ -105,6 +107,8 @@ func (client *ovsClient) DeletePort(brname, portname string) error {
 }
 
 func (client *ovsClient) deletePortByUUID(brname, portUUID string) error {
+	portUpdateLock.Lock()
+	defer portUpdateLock.Unlock()
 	portDeleteCondition := libovsdb.NewCondition("_uuid", "==", []string{"uuid", portUUID})
 	portDeleteOp := libovsdb.Operation{
 		Op:    deleteOperation,
@@ -310,6 +314,8 @@ func (client *ovsClient) updatePortTagByUUID(portUUID string, vlantag int) error
 	if vlantag < 0 || vlantag > 4095 {
 		return fmt.Errorf("The vlan tag value is not in valid range")
 	}
+	portUpdateLock.Lock()
+	defer portUpdateLock.Unlock()
 	portExist, err := client.portExistsByUUID(portUUID)
 	if err != nil {
 		return err

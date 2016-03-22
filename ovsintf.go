@@ -39,6 +39,8 @@ func (client *ovsClient) AddPeerInterfaceOnPort(portname, peername string) error
 }
 
 func (client *ovsClient) addInterfaceOnPort(portName string, intf map[string]interface{}) error {
+	intfUpdateLock.Lock()
+	defer intfUpdateLock.Unlock()
 	namedInterfaceUUID := "gointerface"
 	insertInterfaceOp := libovsdb.Operation{
 		Op:       insertOperation,
@@ -47,7 +49,7 @@ func (client *ovsClient) addInterfaceOnPort(portName string, intf map[string]int
 		UUIDName: namedInterfaceUUID,
 	}
 	// Inserting a Port row in Port table requires mutating the Bridge table
-	mutateUUID := []libovsdb.UUID{libovsdb.UUID{namedInterfaceUUID}}
+	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUuid: namedInterfaceUUID}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUUID)
 	mutation := libovsdb.NewMutation("interfaces", insertOperation, mutateSet)
 	condition := libovsdb.NewCondition("name", "==", portName)
@@ -65,6 +67,8 @@ func (client *ovsClient) addInterfaceOnPort(portName string, intf map[string]int
 }
 
 func (client *ovsClient) RemoveInterfaceFromPort(portname, interfaceUUID string) error {
+	intfUpdateLock.Lock()
+	defer intfUpdateLock.Unlock()
 	namedInterfaceUUID := "gointerface"
 	interfaceDeleteCondition := libovsdb.NewCondition("_uuid", "==", []string{"uuid", interfaceUUID})
 	interfaceDeleteOp := libovsdb.Operation{
@@ -74,7 +78,7 @@ func (client *ovsClient) RemoveInterfaceFromPort(portname, interfaceUUID string)
 	}
 
 	// Inserting a Port row in Port table requires mutating the Bridge table
-	mutateUUID := []libovsdb.UUID{libovsdb.UUID{namedInterfaceUUID}}
+	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUuid: namedInterfaceUUID}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUUID)
 	mutation := libovsdb.NewMutation("interfaces", deleteOperation, mutateSet)
 	condition := libovsdb.NewCondition("name", "==", portname)
