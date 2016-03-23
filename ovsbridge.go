@@ -6,6 +6,15 @@ import (
 	"github.com/kopwei/libovsdb"
 )
 
+// OvsBridge is the structure represents the ovs bridge
+type OvsBridge struct {
+	UUID       string     `json:"_uuid"`
+	Controller string     `json:"controller"`
+	Name       string     `json:"name"`
+	Ports      []*OvsPort `json:"ports"`
+	DatapathID string     `json:"datapath_id"`
+}
+
 // CreateBridge is used to create a ovs bridge
 func (client *ovsClient) CreateBridge(brname string) error {
 	bridgeUpdateLock.Lock()

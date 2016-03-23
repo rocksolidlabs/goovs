@@ -3,10 +3,17 @@ package goovs
 import (
 	"fmt"
 	"reflect"
-	//"strings"
 
 	"github.com/kopwei/libovsdb"
 )
+
+// OvsPort represents a ovs port structure
+type OvsPort struct {
+	UUID      string          `json:"_uuid"`
+	Name      string          `json:"name"`
+	Interface []*OvsInterface `json:"interfaces"`
+	Tag       int             `json:"tag"`
+}
 
 // CreateInternalPort ...
 func (client *ovsClient) CreateInternalPort(brname, portname string, vlantag int) error {
@@ -36,7 +43,7 @@ func (client *ovsClient) CreateVethPort(brname, portname string, vlantag int) er
 	// intf row to insert
 	intf := make(map[string]interface{})
 	intf["name"] = portname
-	//intf["type"] = `system`
+	intf["type"] = "system"
 	return client.createPort(brname, portname, vlantag, intf)
 }
 

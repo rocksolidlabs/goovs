@@ -7,6 +7,14 @@ import (
 	"github.com/kopwei/libovsdb"
 )
 
+// OvsInterface is the structure represents an interface row
+type OvsInterface struct {
+	UUID    string            `json:"_uuid"`
+	Name    string            `json:"name"`
+	Options map[string]string `json:"options"`
+	Type    string            `json:"type"`
+}
+
 // AddInternalInterfaceOnPort ...
 func (client *ovsClient) AddInternalInterfaceOnPort(portname string) error {
 	// intf row to insert
