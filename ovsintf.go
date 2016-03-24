@@ -7,12 +7,34 @@ import (
 	"github.com/kopwei/libovsdb"
 )
 
+var interfaceCache map[string]*OvsInterface
+
 // OvsInterface is the structure represents an interface row
 type OvsInterface struct {
 	UUID    string            `json:"_uuid"`
 	Name    string            `json:"name"`
 	Options map[string]string `json:"options"`
 	Type    string            `json:"type"`
+}
+
+// ReadFromDBRow is used to initialize the object from a row
+func (intf *OvsInterface) ReadFromDBRow(row *libovsdb.Row) error {
+	if intf.Options == nil {
+		intf.Options = make(map[string]string)
+	}
+	for field, value := range row.Fields {
+		switch field {
+		case "name":
+			intf.Name = value.(string)
+		case "type":
+			intf.Type = value.(string)
+		case "options":
+			for key, opt := range value.(libovsdb.OvsMap).GoMap {
+				intf.Options[key.(string)] = opt.(string)
+			}
+		}
+	}
+	return nil
 }
 
 // AddInternalInterfaceOnPort ...

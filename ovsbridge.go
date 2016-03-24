@@ -8,12 +8,39 @@ import (
 
 // OvsBridge is the structure represents the ovs bridge
 type OvsBridge struct {
-	UUID       string     `json:"_uuid"`
-	Controller string     `json:"controller"`
-	Name       string     `json:"name"`
-	Ports      []*OvsPort `json:"ports"`
-	DatapathID string     `json:"datapath_id"`
+	UUID       string   `json:"_uuid"`
+	Controller string   `json:"controller"`
+	Name       string   `json:"name"`
+	PortUUIDs  []string `json:"ports"`
+	DatapathID string   `json:"datapath_id"`
 }
+
+// ReadFromDBRow is used to initialize the object from a row
+func (bridge *OvsBridge) ReadFromDBRow(row *libovsdb.Row) error {
+	if bridge.PortUUIDs == nil {
+		bridge.PortUUIDs = make([]string, 0)
+	}
+	for field, value := range row.Fields {
+		switch field {
+		case "name":
+			bridge.Name = value.(string)
+		case "datapath_id":
+			bridge.DatapathID = value.(string)
+		case "ports":
+			switch value.(type) {
+			case libovsdb.UUID:
+				bridge.PortUUIDs = append(bridge.PortUUIDs, value.(libovsdb.UUID).GoUuid)
+			case libovsdb.OvsSet:
+				for _, uuids := range value.(libovsdb.OvsSet).GoSet {
+					bridge.PortUUIDs = append(bridge.PortUUIDs, uuids.(libovsdb.UUID).GoUuid)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+var bridgeCache map[string]*OvsBridge
 
 // CreateBridge is used to create a ovs bridge
 func (client *ovsClient) CreateBridge(brname string) error {

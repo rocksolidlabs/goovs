@@ -37,6 +37,11 @@ const (
 	updateOperation = "update"
 )
 
+// OvsObject is the main interface represent an ovs object
+type OvsObject interface {
+	ReadFromDBRow(row *libovsdb.Row) error
+}
+
 // OvsClient is the interface towards outside user
 type OvsClient interface {
 	BridgeExists(brname string) (bool, error)
@@ -60,6 +65,7 @@ type ovsClient struct {
 var client *ovsClient
 var update chan *libovsdb.TableUpdates
 var cache map[string]map[string]libovsdb.Row
+
 var bridgeUpdateLock sync.RWMutex
 var portUpdateLock sync.RWMutex
 var intfUpdateLock sync.RWMutex
@@ -143,6 +149,33 @@ func (n Notifier) Echo([]interface{}) {
 }
 */
 
+func updateOvsObjCacheByRow(objtype, uuid string, row *libovsdb.Row) error {
+	if bridgeCache == nil {
+		bridgeCache = make(map[string]*OvsBridge)
+	}
+	if portCache == nil {
+		portCache = make(map[string]*OvsPort)
+	}
+	if interfaceCache == nil {
+		interfaceCache = make(map[string]*OvsInterface)
+	}
+	switch objtype {
+	case "bridge":
+		brObj := &OvsBridge{UUID: uuid}
+		brObj.ReadFromDBRow(row)
+		bridgeCache[uuid] = brObj
+	case "port":
+		portObj := &OvsPort{UUID: uuid}
+		portObj.ReadFromDBRow(row)
+		portCache[uuid] = portObj
+	case "interface":
+		intfObj := &OvsInterface{UUID: uuid}
+		intfObj.ReadFromDBRow(row)
+		interfaceCache[uuid] = intfObj
+	}
+	return nil
+}
+
 func populateCache(updates libovsdb.TableUpdates) {
 	for table, tableUpdate := range updates.Updates {
 		if _, ok := cache[table]; !ok {
@@ -152,7 +185,9 @@ func populateCache(updates libovsdb.TableUpdates) {
 		for uuid, row := range tableUpdate.Rows {
 			empty := libovsdb.Row{}
 			if !reflect.DeepEqual(row.New, empty) {
+				// fmt.Printf("table name:%s\n. row info %+v\n\n", table, row.New)
 				cache[table][uuid] = row.New
+				updateOvsObjCacheByRow(table, uuid, &row.New)
 			} else {
 				delete(cache[table], uuid)
 			}

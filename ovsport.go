@@ -7,12 +7,39 @@ import (
 	"github.com/kopwei/libovsdb"
 )
 
+var portCache map[string]*OvsPort
+
 // OvsPort represents a ovs port structure
 type OvsPort struct {
-	UUID      string          `json:"_uuid"`
-	Name      string          `json:"name"`
-	Interface []*OvsInterface `json:"interfaces"`
-	Tag       int             `json:"tag"`
+	UUID      string   `json:"_uuid"`
+	Name      string   `json:"name"`
+	IntfUUIDs []string `json:"interfaces"`
+	Tag       int      `json:"tag"`
+}
+
+// ReadFromDBRow is used to initialize the object from a row
+func (port *OvsPort) ReadFromDBRow(row *libovsdb.Row) error {
+	if port.IntfUUIDs == nil {
+		port.IntfUUIDs = make([]string, 0)
+	}
+	for field, value := range row.Fields {
+		switch field {
+		case "name":
+			port.Name = value.(string)
+		case "tag":
+			port.Tag = value.(int)
+		case "interfaces":
+			switch value.(type) {
+			case libovsdb.UUID:
+				port.IntfUUIDs = append(port.IntfUUIDs, value.(libovsdb.UUID).GoUuid)
+			case libovsdb.OvsSet:
+				for _, uuids := range value.(libovsdb.OvsSet).GoSet {
+					port.IntfUUIDs = append(port.IntfUUIDs, uuids.(libovsdb.UUID).GoUuid)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // CreateInternalPort ...
