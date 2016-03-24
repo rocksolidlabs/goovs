@@ -59,12 +59,16 @@ type OvsClient interface {
 }
 
 type ovsClient struct {
-	dbClient *libovsdb.OvsdbClient
+	dbClient       *libovsdb.OvsdbClient
+	bridgeCache    map[string]*OvsBridge
+	portCache      map[string]*OvsPort
+	interfaceCache map[string]*OvsInterface
 }
 
 var client *ovsClient
 var update chan *libovsdb.TableUpdates
 var cache map[string]map[string]libovsdb.Row
+var ovsclient *ovsClient
 
 var bridgeUpdateLock sync.RWMutex
 var portUpdateLock sync.RWMutex
@@ -97,16 +101,25 @@ func GetOVSClient(contype, endpoint string) (OvsClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	//var notifier Notifier
-	//dbclient.Register(notifier)
+	var notfr notifier
+	dbclient.Register(notfr)
 
-	//update = make(chan *libovsdb.TableUpdates)
+	update = make(chan *libovsdb.TableUpdates)
 	cache = make(map[string]map[string]libovsdb.Row)
+
+	client = &ovsClient{dbClient: dbclient}
+	if client.bridgeCache == nil {
+		client.bridgeCache = make(map[string]*OvsBridge)
+	}
+	if client.portCache == nil {
+		client.portCache = make(map[string]*OvsPort)
+	}
+	if client.interfaceCache == nil {
+		client.interfaceCache = make(map[string]*OvsInterface)
+	}
 
 	initial, _ := dbclient.MonitorAll(defaultOvsDB, "")
 	populateCache(*initial)
-
-	client = &ovsClient{dbClient: dbclient}
 	return client, nil
 }
 
@@ -133,45 +146,45 @@ func (client *ovsClient) transact(operations []libovsdb.Operation, action string
 	return nil
 }
 
-/*
-type Notifier struct {
+type notifier struct {
 }
 
-func (n Notifier) Update(context interface{}, tableUpdates libovsdb.TableUpdates) {
+func (n notifier) Update(context interface{}, tableUpdates libovsdb.TableUpdates) {
 	populateCache(tableUpdates)
 	update <- &tableUpdates
 }
-func (n Notifier) Locked([]interface{}) {
+func (n notifier) Locked([]interface{}) {
 }
-func (n Notifier) Stolen([]interface{}) {
+func (n notifier) Stolen([]interface{}) {
 }
-func (n Notifier) Echo([]interface{}) {
+func (n notifier) Echo([]interface{}) {
 }
-*/
+func (n notifier) Disconnect([]interface{}) {
+}
+func (n notifier) Disconnected(*libovsdb.OvsdbClient) {
+}
 
-func updateOvsObjCacheByRow(objtype, uuid string, row *libovsdb.Row) error {
-	if bridgeCache == nil {
-		bridgeCache = make(map[string]*OvsBridge)
-	}
-	if portCache == nil {
-		portCache = make(map[string]*OvsPort)
-	}
-	if interfaceCache == nil {
-		interfaceCache = make(map[string]*OvsInterface)
-	}
+func (client *ovsClient) updateOvsObjCacheByRow(objtype, uuid string, row *libovsdb.Row) error {
+	fmt.Println(objtype)
 	switch objtype {
-	case "bridge":
+	case "Bridge":
 		brObj := &OvsBridge{UUID: uuid}
 		brObj.ReadFromDBRow(row)
-		bridgeCache[uuid] = brObj
-	case "port":
+		client.bridgeCache[uuid] = brObj
+		//data, _ := json.MarshalIndent(brObj, "", "    ")
+		//fmt.Println(string(data))
+	case "Port":
 		portObj := &OvsPort{UUID: uuid}
 		portObj.ReadFromDBRow(row)
-		portCache[uuid] = portObj
-	case "interface":
+		client.portCache[uuid] = portObj
+		//data, _ := json.MarshalIndent(portObj, "", "    ")
+		//fmt.Println(string(data))
+	case "Interface":
 		intfObj := &OvsInterface{UUID: uuid}
 		intfObj.ReadFromDBRow(row)
-		interfaceCache[uuid] = intfObj
+		client.interfaceCache[uuid] = intfObj
+		//data, _ := json.MarshalIndent(intfObj, "", "    ")
+		//fmt.Println(string(data))
 	}
 	return nil
 }
@@ -187,7 +200,7 @@ func populateCache(updates libovsdb.TableUpdates) {
 			if !reflect.DeepEqual(row.New, empty) {
 				// fmt.Printf("table name:%s\n. row info %+v\n\n", table, row.New)
 				cache[table][uuid] = row.New
-				updateOvsObjCacheByRow(table, uuid, &row.New)
+				client.updateOvsObjCacheByRow(table, uuid, &row.New)
 			} else {
 				delete(cache[table], uuid)
 			}

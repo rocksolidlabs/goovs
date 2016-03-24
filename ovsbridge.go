@@ -25,7 +25,10 @@ func (bridge *OvsBridge) ReadFromDBRow(row *libovsdb.Row) error {
 		case "name":
 			bridge.Name = value.(string)
 		case "datapath_id":
-			bridge.DatapathID = value.(string)
+			switch value.(type) {
+			case string:
+				bridge.DatapathID = value.(string)
+			}
 		case "ports":
 			switch value.(type) {
 			case libovsdb.UUID:
@@ -39,8 +42,6 @@ func (bridge *OvsBridge) ReadFromDBRow(row *libovsdb.Row) error {
 	}
 	return nil
 }
-
-var bridgeCache map[string]*OvsBridge
 
 // CreateBridge is used to create a ovs bridge
 func (client *ovsClient) CreateBridge(brname string) error {

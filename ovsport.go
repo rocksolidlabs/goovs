@@ -7,14 +7,12 @@ import (
 	"github.com/kopwei/libovsdb"
 )
 
-var portCache map[string]*OvsPort
-
 // OvsPort represents a ovs port structure
 type OvsPort struct {
 	UUID      string   `json:"_uuid"`
 	Name      string   `json:"name"`
 	IntfUUIDs []string `json:"interfaces"`
-	Tag       int      `json:"tag"`
+	Tag       float64  `json:"tag"`
 }
 
 // ReadFromDBRow is used to initialize the object from a row
@@ -27,7 +25,17 @@ func (port *OvsPort) ReadFromDBRow(row *libovsdb.Row) error {
 		case "name":
 			port.Name = value.(string)
 		case "tag":
-			port.Tag = value.(int)
+			switch value.(type) {
+			case float64:
+				port.Tag = value.(float64)
+				/*
+					case libovsdb.OvsSet:
+					for _, tags := value.(libovsdb.OvsSet).GoSet {
+
+					}
+				*/
+			}
+
 		case "interfaces":
 			switch value.(type) {
 			case libovsdb.UUID:

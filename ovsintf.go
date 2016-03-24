@@ -7,8 +7,6 @@ import (
 	"github.com/kopwei/libovsdb"
 )
 
-var interfaceCache map[string]*OvsInterface
-
 // OvsInterface is the structure represents an interface row
 type OvsInterface struct {
 	UUID    string            `json:"_uuid"`
