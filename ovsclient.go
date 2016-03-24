@@ -74,6 +74,10 @@ var bridgeUpdateLock sync.RWMutex
 var portUpdateLock sync.RWMutex
 var intfUpdateLock sync.RWMutex
 
+var bridgeCacheUpdateLock sync.RWMutex
+var portCacheUpdateLock sync.RWMutex
+var intfCacheUpdateLock sync.RWMutex
+
 // GetOVSClient is used for
 func GetOVSClient(contype, endpoint string) (OvsClient, error) {
 	if client != nil {
@@ -165,26 +169,55 @@ func (n notifier) Disconnected(*libovsdb.OvsdbClient) {
 }
 
 func (client *ovsClient) updateOvsObjCacheByRow(objtype, uuid string, row *libovsdb.Row) error {
-	fmt.Println(objtype)
 	switch objtype {
 	case "Bridge":
 		brObj := &OvsBridge{UUID: uuid}
 		brObj.ReadFromDBRow(row)
+		bridgeCacheUpdateLock.Lock()
 		client.bridgeCache[uuid] = brObj
+		bridgeCacheUpdateLock.Unlock()
 		//data, _ := json.MarshalIndent(brObj, "", "    ")
 		//fmt.Println(string(data))
 	case "Port":
 		portObj := &OvsPort{UUID: uuid}
 		portObj.ReadFromDBRow(row)
+		portCacheUpdateLock.Lock()
 		client.portCache[uuid] = portObj
+		portCacheUpdateLock.Unlock()
 		//data, _ := json.MarshalIndent(portObj, "", "    ")
 		//fmt.Println(string(data))
 	case "Interface":
 		intfObj := &OvsInterface{UUID: uuid}
 		intfObj.ReadFromDBRow(row)
+		intfCacheUpdateLock.Lock()
 		client.interfaceCache[uuid] = intfObj
+		intfCacheUpdateLock.Unlock()
 		//data, _ := json.MarshalIndent(intfObj, "", "    ")
 		//fmt.Println(string(data))
+	}
+	return nil
+}
+
+func (client *ovsClient) removeOvsObjCacheByRow(objtype, uuid string) error {
+	switch objtype {
+	case "Bridge":
+		if _, ok := client.bridgeCache[uuid]; ok {
+			bridgeCacheUpdateLock.Lock()
+			delete(client.bridgeCache, uuid)
+			bridgeCacheUpdateLock.Unlock()
+		}
+	case "Port":
+		if _, ok := client.portCache[uuid]; ok {
+			portCacheUpdateLock.Lock()
+			delete(client.portCache, uuid)
+			portCacheUpdateLock.Unlock()
+		}
+	case "Interface":
+		if _, ok := client.interfaceCache[uuid]; ok {
+			intfCacheUpdateLock.Lock()
+			delete(client.interfaceCache, uuid)
+			intfCacheUpdateLock.Unlock()
+		}
 	}
 	return nil
 }
@@ -198,11 +231,13 @@ func populateCache(updates libovsdb.TableUpdates) {
 		for uuid, row := range tableUpdate.Rows {
 			empty := libovsdb.Row{}
 			if !reflect.DeepEqual(row.New, empty) {
-				// fmt.Printf("table name:%s\n. row info %+v\n\n", table, row.New)
+				// fmt.Println(table + " with uuid " + uuid + "is updated")
 				cache[table][uuid] = row.New
 				client.updateOvsObjCacheByRow(table, uuid, &row.New)
 			} else {
 				delete(cache[table], uuid)
+				// fmt.Println(table + " with uuid " + uuid + "is removed")
+				client.removeOvsObjCacheByRow(table, uuid)
 			}
 		}
 	}
