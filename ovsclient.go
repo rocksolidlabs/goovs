@@ -170,7 +170,7 @@ func (n notifier) Disconnected(*libovsdb.OvsdbClient) {
 
 func (client *ovsClient) updateOvsObjCacheByRow(objtype, uuid string, row *libovsdb.Row) error {
 	switch objtype {
-	case "Bridge":
+	case bridgeTableName:
 		brObj := &OvsBridge{UUID: uuid}
 		brObj.ReadFromDBRow(row)
 		bridgeCacheUpdateLock.Lock()
@@ -178,7 +178,7 @@ func (client *ovsClient) updateOvsObjCacheByRow(objtype, uuid string, row *libov
 		bridgeCacheUpdateLock.Unlock()
 		//data, _ := json.MarshalIndent(brObj, "", "    ")
 		//fmt.Println(string(data))
-	case "Port":
+	case portTableName:
 		portObj := &OvsPort{UUID: uuid}
 		portObj.ReadFromDBRow(row)
 		portCacheUpdateLock.Lock()
@@ -186,7 +186,7 @@ func (client *ovsClient) updateOvsObjCacheByRow(objtype, uuid string, row *libov
 		portCacheUpdateLock.Unlock()
 		//data, _ := json.MarshalIndent(portObj, "", "    ")
 		//fmt.Println(string(data))
-	case "Interface":
+	case interfaceTableName:
 		intfObj := &OvsInterface{UUID: uuid}
 		intfObj.ReadFromDBRow(row)
 		intfCacheUpdateLock.Lock()
@@ -200,19 +200,19 @@ func (client *ovsClient) updateOvsObjCacheByRow(objtype, uuid string, row *libov
 
 func (client *ovsClient) removeOvsObjCacheByRow(objtype, uuid string) error {
 	switch objtype {
-	case "Bridge":
+	case bridgeTableName:
 		if _, ok := client.bridgeCache[uuid]; ok {
 			bridgeCacheUpdateLock.Lock()
 			delete(client.bridgeCache, uuid)
 			bridgeCacheUpdateLock.Unlock()
 		}
-	case "Port":
+	case portTableName:
 		if _, ok := client.portCache[uuid]; ok {
 			portCacheUpdateLock.Lock()
 			delete(client.portCache, uuid)
 			portCacheUpdateLock.Unlock()
 		}
-	case "Interface":
+	case interfaceTableName:
 		if _, ok := client.interfaceCache[uuid]; ok {
 			intfCacheUpdateLock.Lock()
 			delete(client.interfaceCache, uuid)
