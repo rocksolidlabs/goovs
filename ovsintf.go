@@ -124,26 +124,13 @@ func (client *ovsClient) RemoveInterfaceFromPort(portname, interfaceUUID string)
 }
 
 func (client *ovsClient) interfaceUUIDExists(interfaceUUID string) (bool, error) {
-	condition := libovsdb.NewCondition("_uuid", "==", []string{"uuid", interfaceUUID})
-	selectOp := libovsdb.Operation{
-		Op:    selectOperation,
-		Table: interfaceTableName,
-		Where: []interface{}{condition},
+	if interfaceUUID == "" {
+		return false, fmt.Errorf("The interface uuid is not valid")
 	}
-	operations := []libovsdb.Operation{selectOp}
-	reply, _ := client.dbClient.Transact(defaultOvsDB, operations...)
-
-	if len(reply) < len(operations) {
-		return false, fmt.Errorf("Number of Replies should be at least equal to number of Operations")
-	}
-	if reply[0].Error != "" {
-		return false, fmt.Errorf("Transaction Failed due to an error: %v", reply[0].Error)
-	}
-	if len(reply[0].Rows) == 0 {
-		//fmt.Println("The reply is empty, interface not found")
-		return false, nil
-	}
-	return true, nil
+	intfCacheUpdateLock.RLock()
+	defer intfCacheUpdateLock.RUnlock()
+	_, ok := client.interfaceCache[interfaceUUID]
+	return ok, nil
 }
 
 func (client *ovsClient) findAllInterfaceUUIDOnPort(portname string) ([]string, error) {

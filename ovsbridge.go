@@ -183,25 +183,14 @@ func (client *ovsClient) BridgeExists(brname string) (bool, error) {
 	if brname == "" {
 		return false, fmt.Errorf("The bridge name is invalid")
 	}
-	condition := libovsdb.NewCondition("name", "==", brname)
-	selectOp := libovsdb.Operation{
-		Op:    selectOperation,
-		Table: bridgeTableName,
-		Where: []interface{}{condition},
+	bridgeCacheUpdateLock.RLock()
+	defer bridgeCacheUpdateLock.RUnlock()
+	for _, br := range client.bridgeCache {
+		if br.Name == brname {
+			return true, nil
+		}
 	}
-	operations := []libovsdb.Operation{selectOp}
-	reply, _ := client.dbClient.Transact(defaultOvsDB, operations...)
-
-	if len(reply) < len(operations) {
-		return false, fmt.Errorf("Number of Replies should be at least equal to number of Operations")
-	}
-	if reply[0].Error != "" {
-		return false, fmt.Errorf("Transaction Failed due to an error: %v", reply[0].Error)
-	}
-	if len(reply[0].Rows) == 0 {
-		return false, nil
-	}
-	return true, nil
+	return false, nil
 }
 
 func (client *ovsClient) UpdateBridgeController(brname, controller string) error {
