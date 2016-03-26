@@ -248,25 +248,13 @@ func (client *ovsClient) UpdateBridgeController(brname, controller string) error
 }
 
 func (client *ovsClient) getBridgeUUIDByName(brname string) (string, error) {
-	condition := libovsdb.NewCondition("name", "==", brname)
-	selectOp := libovsdb.Operation{
-		Op:    selectOperation,
-		Table: bridgeTableName,
-		Where: []interface{}{condition},
-		//Columns: []string{"_uuid"},
+	if brname == "" {
+		return "", fmt.Errorf("The bridge name is invalid")
 	}
-	operations := []libovsdb.Operation{selectOp}
-	reply, _ := client.dbClient.Transact(defaultOvsDB, operations...)
-
-	if len(reply) < len(operations) {
-		return "", fmt.Errorf("get bridge uuid failed due to Number of Replies should be at least equal to number of Operations")
+	for uuid, bridge := range client.bridgeCache {
+		if bridge.Name == brname {
+			return uuid, nil
+		}
 	}
-	if reply[0].Error != "" {
-		return "", fmt.Errorf("get bridge uuid failed due to Transaction Failed due to an error: %v", reply[0].Error)
-	}
-	if len(reply[0].Rows) == 0 {
-		return "", fmt.Errorf("get bridge uuid failed due to bridge name doesn't exist")
-	}
-	answer := reply[0].Rows[0]["_uuid"].([]interface{})[1].(string)
-	return answer, nil
+	return "", fmt.Errorf("The brdige name %s doesn't exist", brname)
 }
