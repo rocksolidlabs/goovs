@@ -1,6 +1,7 @@
 {
 	"ImportPath": "github.com/kopwei/goovs",
 	"GoVersion": "go1.6",
+	"GodepVersion": "v60",
 	"Packages": [
 		"./..."
 	],
@@ -12,6 +13,10 @@
 		},
 		{
 			"ImportPath": "github.com/cenkalti/rpc2",
+			"Rev": "2d1be381ce47537e9e076b2b76dc70933162e4e9"
+		},
+		{
+			"ImportPath": "github.com/cenkalti/rpc2/jsonrpc",
 			"Rev": "2d1be381ce47537e9e076b2b76dc70933162e4e9"
 		},
 		{
