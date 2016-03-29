@@ -56,6 +56,7 @@ type OvsClient interface {
 	FindAllPortsOnBridge(brname string) ([]string, error)
 	PortExistsOnBridge(portname, brname string) (bool, error)
 	RemoveInterfaceFromPort(portname, interfaceUUID string) error
+	Disconnect()
 }
 
 type ovsClient struct {
@@ -125,6 +126,10 @@ func GetOVSClient(contype, endpoint string) (OvsClient, error) {
 	initial, _ := dbclient.MonitorAll(defaultOvsDB, "")
 	populateCache(*initial)
 	return client, nil
+}
+
+func (client *ovsClient) Disconnect() {
+	client.dbClient.Disconnect()
 }
 
 func (client *ovsClient) transact(operations []libovsdb.Operation, action string) error {
