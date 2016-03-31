@@ -5,7 +5,7 @@ import (
 )
 
 func TestBridgeExists(t *testing.T) {
-	brname := "nonexistentbr"
+	//brname := "nonexistentbr"
 }
 
 func TestCreateBridge(t *testing.T) {
