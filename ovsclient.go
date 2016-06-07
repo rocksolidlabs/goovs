@@ -67,7 +67,6 @@ type ovsClient struct {
 }
 
 var client *ovsClient
-var update chan *libovsdb.TableUpdates
 var cache map[string]map[string]libovsdb.Row
 var ovsclient *ovsClient
 
@@ -109,7 +108,6 @@ func GetOVSClient(contype, endpoint string) (OvsClient, error) {
 	var notfr notifier
 	dbclient.Register(notfr)
 
-	update = make(chan *libovsdb.TableUpdates)
 	cache = make(map[string]map[string]libovsdb.Row)
 
 	client = &ovsClient{dbClient: dbclient}
@@ -160,7 +158,6 @@ type notifier struct {
 
 func (n notifier) Update(context interface{}, tableUpdates libovsdb.TableUpdates) {
 	populateCache(tableUpdates)
-	update <- &tableUpdates
 }
 func (n notifier) Locked([]interface{}) {
 }
