@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/kopwei/libovsdb"
+	"github.com/socketplane/libovsdb"
 )
 
 // OvsInterface is the structure represents an interface row
@@ -77,7 +77,7 @@ func (client *ovsClient) addInterfaceOnPort(portName string, intf map[string]int
 		UUIDName: namedInterfaceUUID,
 	}
 	// Inserting a Port row in Port table requires mutating the Bridge table
-	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUuid: namedInterfaceUUID}}
+	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUUID: namedInterfaceUUID}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUUID)
 	mutation := libovsdb.NewMutation("interfaces", insertOperation, mutateSet)
 	condition := libovsdb.NewCondition("name", "==", portName)
@@ -106,7 +106,7 @@ func (client *ovsClient) RemoveInterfaceFromPort(portname, interfaceUUID string)
 	}
 
 	// Inserting a Port row in Port table requires mutating the Bridge table
-	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUuid: namedInterfaceUUID}}
+	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUUID: namedInterfaceUUID}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUUID)
 	mutation := libovsdb.NewMutation("interfaces", deleteOperation, mutateSet)
 	condition := libovsdb.NewCondition("name", "==", portname)

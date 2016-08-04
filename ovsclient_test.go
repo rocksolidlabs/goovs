@@ -1,13 +1,19 @@
 package goovs
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
-	"github.com/kopwei/libovsdb"
+	"github.com/socketplane/libovsdb"
 )
 
 func preparingEnv() *ovsClient {
-	client, _ := GetOVSClient("tcp", "ovs:6640")
+	client, err := GetOVSClient("unix", "")
+	if err != nil {
+		fmt.Println("preparingEnv: Couldn't connect to OVS.")
+		os.Exit(1)
+	}
 	return client.(*ovsClient)
 }
 
@@ -16,7 +22,7 @@ func tearDown(client OvsClient) {
 }
 
 func TestGetOVSClient(t *testing.T) {
-	client, _ := GetOVSClient("tcp", "ovs:6640")
+	client, _ := GetOVSClient("unix", "")
 	if client == nil {
 		t.Fatal("Get ovs client test failed")
 	}

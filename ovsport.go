@@ -3,7 +3,7 @@ package goovs
 import (
 	"fmt"
 
-	"github.com/kopwei/libovsdb"
+	"github.com/socketplane/libovsdb"
 )
 
 // OvsPort represents a ovs port structure
@@ -38,10 +38,10 @@ func (port *OvsPort) ReadFromDBRow(row *libovsdb.Row) error {
 		case "interfaces":
 			switch value.(type) {
 			case libovsdb.UUID:
-				port.IntfUUIDs = append(port.IntfUUIDs, value.(libovsdb.UUID).GoUuid)
+				port.IntfUUIDs = append(port.IntfUUIDs, value.(libovsdb.UUID).GoUUID)
 			case libovsdb.OvsSet:
 				for _, uuids := range value.(libovsdb.OvsSet).GoSet {
-					port.IntfUUIDs = append(port.IntfUUIDs, uuids.(libovsdb.UUID).GoUuid)
+					port.IntfUUIDs = append(port.IntfUUIDs, uuids.(libovsdb.UUID).GoUUID)
 				}
 			}
 		}
@@ -103,7 +103,7 @@ func (client *ovsClient) createPort(brname, portname string, vlantag int, intf m
 	// port row to insert
 	port := make(map[string]interface{})
 	port["name"] = portname
-	port["interfaces"] = libovsdb.UUID{GoUuid: namedInterfaceUUID}
+	port["interfaces"] = libovsdb.UUID{GoUUID: namedInterfaceUUID}
 	if vlantag > 0 && vlantag <= 4095 {
 		port["tag"] = vlantag
 	}
@@ -115,7 +115,7 @@ func (client *ovsClient) createPort(brname, portname string, vlantag int, intf m
 		UUIDName: namedPortUUID,
 	}
 	// Inserting a Port row in Port table requires mutating the Bridge table
-	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUuid: namedPortUUID}}
+	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUUID: namedPortUUID}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUUID)
 	mutation := libovsdb.NewMutation("ports", insertOperation, mutateSet)
 	condition := libovsdb.NewCondition("name", "==", brname)
@@ -158,7 +158,7 @@ func (client *ovsClient) deletePortByUUID(brname, portUUID string) error {
 	}
 
 	// Inserting a Port row in Port table requires mutating the Bridge table
-	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUuid: portUUID}}
+	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUUID: portUUID}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUUID)
 	mutation := libovsdb.NewMutation("ports", deleteOperation, mutateSet)
 	condition := libovsdb.NewCondition("name", "==", brname)
