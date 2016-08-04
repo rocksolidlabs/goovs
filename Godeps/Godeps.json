@@ -1,28 +1,24 @@
 {
 	"ImportPath": "github.com/kopwei/goovs",
 	"GoVersion": "go1.6",
-	"GodepVersion": "v60",
-	"Packages": [
-		"./..."
-	],
+	"GodepVersion": "v71",
 	"Deps": [
 		{
-			"ImportPath": "github.com/cenkalti/hub",
-			"Comment": "v1.0.0-14-g57d753b",
-			"Rev": "57d753b5f4856e77b3cf8ecce78c97215a7d324d"
+			"ImportPath": "github.com/cenk/hub",
+			"Comment": "v1.0.0-19-g11382a9",
+			"Rev": "11382a9960d39b0ecda16fd01c424c11ff765a34"
 		},
 		{
-			"ImportPath": "github.com/cenkalti/rpc2",
-			"Rev": "2d1be381ce47537e9e076b2b76dc70933162e4e9"
+			"ImportPath": "github.com/cenk/rpc2",
+			"Rev": "7ab76d2e88c77ca1a715756036d8264b2886acd2"
 		},
 		{
-			"ImportPath": "github.com/cenkalti/rpc2/jsonrpc",
-			"Rev": "2d1be381ce47537e9e076b2b76dc70933162e4e9"
+			"ImportPath": "github.com/cenk/rpc2/jsonrpc",
+			"Rev": "7ab76d2e88c77ca1a715756036d8264b2886acd2"
 		},
 		{
-			"ImportPath": "github.com/kopwei/libovsdb",
-			"Comment": "v0.1-5-g6b8c174",
-			"Rev": "6b8c1740034c601c462bea2455d4b8e7c83907f4"
+			"ImportPath": "github.com/socketplane/libovsdb",
+			"Rev": "5113f8fb4d9d374417ab4ce35424fbea1aad7272"
 		}
 	]
 }

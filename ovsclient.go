@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/kopwei/libovsdb"
+	"github.com/socketplane/libovsdb"
 )
 
 const (
@@ -85,22 +85,29 @@ func GetOVSClient(contype, endpoint string) (OvsClient, error) {
 	}
 	var dbclient *libovsdb.OvsdbClient
 	var err error
-	if contype == "tcp" {
+	switch contype {
+	case "tcp":
 		if endpoint == "" {
 			dbclient, err = libovsdb.Connect(defaultTCPHost, defaultTCPPort)
 		} else {
-			host, port, err := net.SplitHostPort(endpoint)
+			var host, port string
+			host, port, err = net.SplitHostPort(endpoint)
 			if err != nil {
 				return nil, err
 			}
-			portInt, _ := strconv.Atoi(port)
+			var portInt int
+			if portInt, err = strconv.Atoi(port); err != nil {
+				return nil, err
+			}
 			dbclient, err = libovsdb.Connect(host, portInt)
 		}
-	} else if contype == "unix" {
+	case "unix":
 		if endpoint == "" {
 			endpoint = defaultUnixEndpoint
 		}
-		dbclient, err = libovsdb.ConnectUnix(endpoint)
+		dbclient, err = libovsdb.ConnectWithUnixSocket(endpoint)
+	default:
+		return nil, fmt.Errorf("GetOVSClient: Unsupported connection type %q.", contype)
 	}
 	if err != nil {
 		return nil, err
@@ -121,7 +128,11 @@ func GetOVSClient(contype, endpoint string) (OvsClient, error) {
 		client.interfaceCache = make(map[string]*OvsInterface)
 	}
 
-	initial, _ := dbclient.MonitorAll(defaultOvsDB, "")
+	var initial *libovsdb.TableUpdates
+	initial, err = dbclient.MonitorAll(defaultOvsDB, "")
+	if err != nil {
+		return nil, err
+	}
 	populateCache(*initial)
 	return client, nil
 }
@@ -147,7 +158,7 @@ func (client *ovsClient) transact(operations []libovsdb.Operation, action string
 		}
 	}
 	//if ok {
-	//	log.Println(action, "successful: ", reply[0].UUID.GoUuid)
+	//	log.Println(action, "successful: ", reply[0].UUID.GoUUID)
 	//}
 
 	return nil
@@ -170,11 +181,13 @@ func (n notifier) Disconnect([]interface{}) {
 func (n notifier) Disconnected(*libovsdb.OvsdbClient) {
 }
 
-func (client *ovsClient) updateOvsObjCacheByRow(objtype, uuid string, row *libovsdb.Row) error {
+func (client *ovsClient) updateOvsObjCacheByRow(objtype, uuid string, row *libovsdb.Row) (err error) {
 	switch objtype {
 	case bridgeTableName:
 		brObj := &OvsBridge{UUID: uuid}
-		brObj.ReadFromDBRow(row)
+		if err = brObj.ReadFromDBRow(row); err != nil {
+			return
+		}
 		bridgeCacheUpdateLock.Lock()
 		client.bridgeCache[uuid] = brObj
 		bridgeCacheUpdateLock.Unlock()
@@ -182,7 +195,9 @@ func (client *ovsClient) updateOvsObjCacheByRow(objtype, uuid string, row *libov
 		//fmt.Println(string(data))
 	case portTableName:
 		portObj := &OvsPort{UUID: uuid}
-		portObj.ReadFromDBRow(row)
+		if err = portObj.ReadFromDBRow(row); err != nil {
+			return
+		}
 		portCacheUpdateLock.Lock()
 		client.portCache[uuid] = portObj
 		portCacheUpdateLock.Unlock()
@@ -190,14 +205,16 @@ func (client *ovsClient) updateOvsObjCacheByRow(objtype, uuid string, row *libov
 		//fmt.Println(string(data))
 	case interfaceTableName:
 		intfObj := &OvsInterface{UUID: uuid}
-		intfObj.ReadFromDBRow(row)
+		if err = intfObj.ReadFromDBRow(row); err != nil {
+			return
+		}
 		intfCacheUpdateLock.Lock()
 		client.interfaceCache[uuid] = intfObj
 		intfCacheUpdateLock.Unlock()
 		//data, _ := json.MarshalIndent(intfObj, "", "    ")
 		//fmt.Println(string(data))
 	}
-	return nil
+	return
 }
 
 func (client *ovsClient) removeOvsObjCacheByRow(objtype, uuid string) error {
@@ -224,7 +241,7 @@ func (client *ovsClient) removeOvsObjCacheByRow(objtype, uuid string) error {
 	return nil
 }
 
-func populateCache(updates libovsdb.TableUpdates) {
+func populateCache(updates libovsdb.TableUpdates) (err error) {
 	for table, tableUpdate := range updates.Updates {
 		if _, ok := cache[table]; !ok {
 			cache[table] = make(map[string]libovsdb.Row)
@@ -235,14 +252,19 @@ func populateCache(updates libovsdb.TableUpdates) {
 			if !reflect.DeepEqual(row.New, empty) {
 				// fmt.Println(table + " with uuid " + uuid + "is updated")
 				cache[table][uuid] = row.New
-				client.updateOvsObjCacheByRow(table, uuid, &row.New)
+				if err = client.updateOvsObjCacheByRow(table, uuid, &row.New); err != nil {
+					return
+				}
 			} else {
 				delete(cache[table], uuid)
 				// fmt.Println(table + " with uuid " + uuid + "is removed")
-				client.removeOvsObjCacheByRow(table, uuid)
+				if err = client.removeOvsObjCacheByRow(table, uuid); err != nil {
+					return
+				}
 			}
 		}
 	}
+	return
 }
 
 func getRootUUID() string {

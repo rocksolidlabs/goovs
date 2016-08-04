@@ -3,7 +3,7 @@ package goovs
 import (
 	"fmt"
 
-	"github.com/kopwei/libovsdb"
+	"github.com/socketplane/libovsdb"
 )
 
 // OvsBridge is the structure represents the ovs bridge
@@ -32,10 +32,10 @@ func (bridge *OvsBridge) ReadFromDBRow(row *libovsdb.Row) error {
 		case "ports":
 			switch value.(type) {
 			case libovsdb.UUID:
-				bridge.PortUUIDs = append(bridge.PortUUIDs, value.(libovsdb.UUID).GoUuid)
+				bridge.PortUUIDs = append(bridge.PortUUIDs, value.(libovsdb.UUID).GoUUID)
 			case libovsdb.OvsSet:
 				for _, uuids := range value.(libovsdb.OvsSet).GoSet {
-					bridge.PortUUIDs = append(bridge.PortUUIDs, uuids.(libovsdb.UUID).GoUuid)
+					bridge.PortUUIDs = append(bridge.PortUUIDs, uuids.(libovsdb.UUID).GoUUID)
 				}
 			}
 		}
@@ -73,7 +73,7 @@ func (client *ovsClient) CreateBridge(brname string) error {
 	// port row to insert
 	port := make(map[string]interface{})
 	port["name"] = brname
-	port["interfaces"] = libovsdb.UUID{GoUuid: namedInterfaceUUID}
+	port["interfaces"] = libovsdb.UUID{GoUUID: namedInterfaceUUID}
 
 	insertPortOp := libovsdb.Operation{
 		Op:       insertOperation,
@@ -86,7 +86,7 @@ func (client *ovsClient) CreateBridge(brname string) error {
 	bridge := make(map[string]interface{})
 	bridge["name"] = brname
 	bridge["stp_enable"] = false
-	bridge["ports"] = libovsdb.UUID{GoUuid: namedPortUUID}
+	bridge["ports"] = libovsdb.UUID{GoUUID: namedPortUUID}
 
 	// simple insert operation
 	insertBridgeOp := libovsdb.Operation{
@@ -97,10 +97,10 @@ func (client *ovsClient) CreateBridge(brname string) error {
 	}
 
 	// Inserting a Bridge row in Bridge table requires mutating the open_vswitch table
-	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUuid: namedBridgeUUID}}
+	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUUID: namedBridgeUUID}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUUID)
 	mutation := libovsdb.NewMutation("bridges", insertOperation, mutateSet)
-	condition := libovsdb.NewCondition("_uuid", "==", libovsdb.UUID{GoUuid: getRootUUID()})
+	condition := libovsdb.NewCondition("_uuid", "==", libovsdb.UUID{GoUUID: getRootUUID()})
 
 	// simple mutate operation
 	mutateOp := libovsdb.Operation{
@@ -137,10 +137,10 @@ func (client *ovsClient) DeleteBridge(brname string) error {
 	}
 
 	// Deleting a Bridge row in Bridge table requires mutating the open_vswitch table
-	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUuid: bridgeUUID}}
+	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUUID: bridgeUUID}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUUID)
 	mutation := libovsdb.NewMutation("bridges", deleteOperation, mutateSet)
-	condition := libovsdb.NewCondition("_uuid", "==", libovsdb.UUID{GoUuid: getRootUUID()})
+	condition := libovsdb.NewCondition("_uuid", "==", libovsdb.UUID{GoUUID: getRootUUID()})
 
 	// simple mutate operation
 	mutateOp := libovsdb.Operation{
@@ -219,7 +219,7 @@ func (client *ovsClient) UpdateBridgeController(brname, controller string) error
 		UUIDName: namedControllerUUID,
 	}
 	bridge := make(map[string]interface{})
-	bridge["controller"] = libovsdb.UUID{GoUuid: namedControllerUUID}
+	bridge["controller"] = libovsdb.UUID{GoUUID: namedControllerUUID}
 
 	updateBrCondition := libovsdb.NewCondition("name", "==", brname)
 	updateOp := libovsdb.Operation{
@@ -230,10 +230,10 @@ func (client *ovsClient) UpdateBridgeController(brname, controller string) error
 	}
 
 	// Update a Bridge row in Bridge table requires mutating the open_vswitch table
-	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUuid: namedControllerUUID}}
+	mutateUUID := []libovsdb.UUID{libovsdb.UUID{GoUUID: namedControllerUUID}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUUID)
 	mutation := libovsdb.NewMutation("controller", insertOperation, mutateSet)
-	condition := libovsdb.NewCondition("_uuid", "==", libovsdb.UUID{GoUuid: bridgeUUID})
+	condition := libovsdb.NewCondition("_uuid", "==", libovsdb.UUID{GoUUID: bridgeUUID})
 
 	// simple mutate operation
 	mutateOp := libovsdb.Operation{
