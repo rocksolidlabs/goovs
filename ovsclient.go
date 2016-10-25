@@ -77,6 +77,7 @@ var intfUpdateLock sync.RWMutex
 var bridgeCacheUpdateLock sync.RWMutex
 var portCacheUpdateLock sync.RWMutex
 var intfCacheUpdateLock sync.RWMutex
+var populateCacheLock sync.RWMutex
 
 // GetOVSClient is used for
 func GetOVSClient(contype, endpoint string) (OvsClient, error) {
@@ -242,6 +243,8 @@ func (client *ovsClient) removeOvsObjCacheByRow(objtype, uuid string) error {
 }
 
 func populateCache(updates libovsdb.TableUpdates) (err error) {
+	populateCacheLock.Lock()
+	defer populateCacheLock.Unlock()
 	for table, tableUpdate := range updates.Updates {
 		if _, ok := cache[table]; !ok {
 			cache[table] = make(map[string]libovsdb.Row)
