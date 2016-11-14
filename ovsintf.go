@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/socketplane/libovsdb"
+	"github.com/rocksolidlabs/libovsdb"
 )
 
 // OvsInterface is the structure represents an interface row
