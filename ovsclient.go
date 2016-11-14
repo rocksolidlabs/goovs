@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/socketplane/libovsdb"
+	"github.com/rocksolidlabs/libovsdb"
 )
 
 const (
