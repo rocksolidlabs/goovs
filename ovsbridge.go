@@ -3,7 +3,7 @@ package goovs
 import (
 	"fmt"
 
-	"github.com/socketplane/libovsdb"
+	"github.com/rocksolidlabs/libovsdb"
 )
 
 // OvsBridge is the structure represents the ovs bridge
